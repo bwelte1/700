@@ -2,6 +2,7 @@
 import pykep as pk
 import pygmo as pg
 import numpy as np
+import time
 
 # Plotting imports
 import matplotlib as mpl
@@ -48,3 +49,4 @@ ax3.view_init(elev=0, azim=0)
 
 # Inspect
 udp.pretty(pop.champion_x)
+plt.show()
