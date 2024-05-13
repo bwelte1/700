@@ -41,7 +41,13 @@ def parse_args():
                         help="the wandb's project name")
     parser.add_argument('--wandb-entity', type=str, default=None,
                         help="the entity (team) of wandb's project")
+    
+    parser.add_argument('--settings', type=str, default="settings_def.txt",
+        help='Input settings file')
+    
     args = parser.parse_args()
+    settings_file = "./settings_files/" + args.settings
+    input_model = "./settings_files/" + args.input_model
     return args
     
 if __name__ == '__main__': 
