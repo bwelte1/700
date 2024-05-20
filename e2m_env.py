@@ -1,6 +1,7 @@
 import pykep as pk
+import gymnasium as gym
 
-class EarthToMarsEnvironment:
+class Earth2MarsEnv(gym.Env):
     def __init__(self):
         # Initialize environment parameters
         self.current_time = 0
