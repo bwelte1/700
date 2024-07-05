@@ -8,6 +8,10 @@ from numpy import sqrt, log, exp, cos, sin, arccos, cross, dot, array
 import pykep as pk
 from pykep.core import propagate_lagrangian, propagate_taylor, ic2par, ic2eq
 
+import stable_baselines3
+from stable_baselines3.common.env_checker import check_env
+
+
 """ RL ENVIRONMENT CLASS """
 class Earth2MarsEnv(gym.Env):
     """
@@ -24,7 +28,6 @@ class Earth2MarsEnv(gym.Env):
         - vT:               target velocity
         - rT:               target position
         - m0:               initial mass, kg
-        - current_time
         - max_thrust        maximum thrust force, kN
 
     Observations:
@@ -57,10 +60,9 @@ class Earth2MarsEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
     """ CLASS CONSTRUCTOR """
-    def __init__(self, NSTEPS, NITERS, amu, mission_time, v0, r0, vT, rT, m0, current_time, max_thrust):
+    def __init__(self, NSTEPS, NITERS, amu, mission_time, v0, r0, vT, rT, m0, max_thrust):
         super(Earth2MarsEnv, self).__init__()
         # Initialize environment parameters
-        self.current_time = current_time
         self.v0 = array(v0)
         self.r0 = array(r0)
         self.NSTEPS = NSTEPS
@@ -211,3 +213,9 @@ class Earth2MarsEnv(gym.Env):
     
     def close(self):
         pass
+
+
+# if __name__ == '__main__':
+#     env = Earth2MarsEnv(NSTEPS=10, NITERS=20, amu=5, mission_time=500, v0 = array([0,0,0]), r0=array([0,0,0]), vT=[1,1,1], rT=[1,1,1], m0=1000, max_thrust=0.005)
+#     # If the environment don't follow the interface, an error will be thrown
+#     check_env(env, warn=True)
