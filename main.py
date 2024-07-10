@@ -48,18 +48,25 @@ if __name__ == '__main__':
     load_model = bool(int(load_model))
     Tmax = float(Tmax)
     NSTEPS = int(NSTEPS)
-    eps_schedule = eps_schedule
     num_cpu = int(num_cpu)
     init_learning_rate = float(init_learning_rate)
-    init_clip_range = init_clip_range
-    learning_rate = learning_rate
-    clip_range = clip_range
-    ent_coef = ent_coef
-    gamma = gamma
-    lam = lam
-    noptepochs = noptepochs
-    nminibatches = nminibatches
-    NITERS = NITERS
+    init_clip_range = float(init_clip_range)
+    ent_coef = float(ent_coef)
+    nminibatches = int(nminibatches)
+    NITERS = int(NITERS)
+    n_steps = int(NSTEPS*nminibatches)
+    gamma = float(gamma)
+    gae_lambda = float(gae_lambda)
+    n_epochs = int(n_epochs)
+    batch_size = int(batch_size)
+    f_coef = float(f_coef)
+    max_grad_norm = floar(max_grad_norm)
+    use_sde = bool(int(use_sde))
+    normalize_advantage = bool(int(normalize_advantage))
+    sde_sample_freq = int(sde_sample_freq)
+    stats_window_size = int(stats_window_size)
+    verbose = bool(int(verbose))
+    _init_setup_model = bool(int(_init_setup_model))
     
     # Physical constants
     amu = 132712440018.             # km^3/s^2, Gravitational constant of the central body
@@ -79,39 +86,49 @@ if __name__ == '__main__':
     
     # MISSION TIME
     mission_time = 500
-        
-    # shared_features_extractor set to False
+    
+    env = Earth2MarsEnv(
+        NSTEPS=NSTEPS, 
+        NITERS=NITERS, 
+        amu=amu, 
+        mission_time=mission_time, 
+        v0=v0, 
+        r0=r0, 
+        vT=vT, 
+        rT=rT, 
+        m0=m0, 
+        max_thrust=Tmax
+    )
+    
     policy_kwargs = {
         'share_features_extractor': False
     }
 
-    env = Earth2MarsEnv(NSTEPS=NSTEPS, NITERS=NITERS, amu=amu, mission_time=mission_time, v0=v0, r0=r0, vT=vT, rT=rT, m0=m0, max_thrust=Tmax)
-
     model = PPO(
         policy='MlpPolicy', 
         env=env, 
-        learning_rate=0.0003, 
-        n_steps=2048, 
-        batch_size=64,
-        n_epochs=10, 
-        gamma=0.99, 
-        gae_lambda=0.95, 
-        clip_range=0.2, 
+        learning_rate=init_learning_rate, 
+        n_steps=n_steps, 
+        batch_size=batch_size,
+        n_epochs=n_epochs, 
+        gamma=gamma, 
+        gae_lambda=gae_lambda, 
+        clip_range=init_clip_range, 
         clip_range_vf=None, 
-        normalize_advantage=True, 
-        ent_coef=0.0,
-        f_coef=0.5, 
-        max_grad_norm=0.5, 
-        use_sde=False, 
-        sde_sample_freq=-1, 
+        normalize_advantage=normalize_advantage, 
+        ent_coef=ent_coef,
+        f_coef=f_coef, 
+        max_grad_norm=max_grad_norm, 
+        use_sde=use_sde, 
+        sde_sample_freq=sde_sample_freq, 
         rollout_buffer_class=None, 
         rollout_buffer_kwargs=None, 
         target_kl=None, 
-        stats_window_size=100, 
+        stats_window_size=stats_window_size, 
         tensorboard_log=None, 
-        policy_kwargs=None, 
-        verbose=0, 
+        policy_kwargs=policy_kwargs, 
+        verbose=verbose, 
         seed=None, 
         device='auto', 
-        _init_setup_model=True
+        _init_setup_model=_init_setup_model
     )
