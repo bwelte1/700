@@ -29,6 +29,7 @@ class Earth2MarsEnv(gym.Env):
         - rT:               target position
         - m0:               initial mass, kg
         - max_thrust        maximum thrust force, kN
+        - v_ejection        ejection velocity
 
     Observations:
         Num	Observation                Min     Max
@@ -44,9 +45,9 @@ class Earth2MarsEnv(gym.Env):
     Actions:
         Type: Box(3)
         Num	Action
-        0	ux                          -1      1
-        1	uy                          -1      1
-        2	uz                          -1      1
+        0	θ - yaw angle                                               -1      1
+        1	φ - pitch angle                                             -1      1
+        2	r - point distance from centre to edge of ellipsoid         -1      1
     
     Reward:
         [at any time step]                              -mp
@@ -60,7 +61,7 @@ class Earth2MarsEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
     """ CLASS CONSTRUCTOR """
-    def __init__(self, NSTEPS, NITERS, amu, mission_time, v0, r0, vT, rT, m0, max_thrust):
+    def __init__(self, NSTEPS, NITERS, amu, mission_time, v0, r0, vT, rT, m0, max_thrust, v_ejection):
         super(Earth2MarsEnv, self).__init__()
         # Initialize environment parameters
         self.v0 = array(v0)
@@ -73,6 +74,7 @@ class Earth2MarsEnv(gym.Env):
         self.rT = rT
         self.m0 = m0
         self.max_thrust = max_thrust
+        self.v_ejection = v_ejection
         
         self.isDone = False
                 
@@ -102,7 +104,7 @@ class Earth2MarsEnv(gym.Env):
         
         self.observation_space = spaces.Box(o_lb, o_ub, dtype=np.float64)
         
-        """ ACTION ASPACE """
+        """ ACTION SPACE """
         # Lower bounds
         a_lb = np.array([-1., -1., -1.])
         # Upper bounds
@@ -162,29 +164,32 @@ class Earth2MarsEnv(gym.Env):
         return reward
         
     def propagation_step(self, action):
+        # Position and velocity at the next time step given no dv
+        r_next_list, v_next_list = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof = self.time_step, mu = self.amu)
         
         if self.NSTEPS > self.training_steps:
-            max_v = self.max_thrust/self.m_current*self.time_passed # v = F/m*t
-            u_current_rtn = max_v * action  # TODO: May need to be changed from RTN to different coord spec
+            # TODO: Convert point within ellipsoid to targetable position
+            
+            # TODO: Use pykep Lambert solver to calculate new velocity
+            dv = 0
+            pass
         
-            # velocity after dv
-            vk_after = self.v_current + u_current_rtn
-            
-        else:   # final time step
-            r_next = self.rT
-            vk_after = (self.rT - self.r_current) / self.time_step
+        # FINAL STEP
+        else:  
+            r_next = self.rT    # Next position is mars
+            # TODO: Calculate required dv with lambert
             self.isDone = True    
-            
-        # Position and velocity at the next time step
-        r_next_list, v_next_list = propagate_lagrangian(r0 = self.r_current, v0 = vk_after, tof = self.time_step, mu = self.amu)
+        
+        # TODO: Add a final final step to equalize velocity with mars
         
         # Spacecraft mass at the next time step
-        m_next = self.Tsiolkowsky(u_current_rtn)
+        m_next = self.Tsiolkovsky(dv)
         
+        # TODO: Return position and velocity arrays
         r_next = array(r_next_list)
         v_next = array(v_next_list)
         
-        return r_next, v_next, m_next, u_current_rtn
+        return r_next, v_next, m_next, dv
     
         
         
@@ -213,6 +218,11 @@ class Earth2MarsEnv(gym.Env):
     
     def close(self):
         pass
+    
+    def Tsiolkovsky(self, dv):
+        m_next = self.m_current*exp(-norm(dv)/self.v_ejection)
+        return m_next
+        
 
 
 # if __name__ == '__main__':
