@@ -60,7 +60,7 @@ if __name__ == '__main__':
     n_epochs = int(n_epochs)
     batch_size = int(batch_size)
     f_coef = float(f_coef)
-    max_grad_norm = floar(max_grad_norm)
+    max_grad_norm = float(max_grad_norm)
     use_sde = bool(int(use_sde))
     normalize_advantage = bool(int(normalize_advantage))
     sde_sample_freq = int(sde_sample_freq)
@@ -76,6 +76,7 @@ if __name__ == '__main__':
     mconv = 1000.                   # mass, kg
     aconv = vconv/tconv             # acceleration, km/s^2
     fconv = mconv*aconv             # force, kN
+    v_ejecection = 50               # propellant ejection velocity
     
     # Initial Conditions TODO: CHANGE LATER
     r0 = [0, 0, 0]
@@ -97,7 +98,8 @@ if __name__ == '__main__':
         vT=vT, 
         rT=rT, 
         m0=m0, 
-        max_thrust=Tmax
+        max_thrust=Tmax,
+        v_ejection=v_ejecection
     )
     
     policy_kwargs = {
