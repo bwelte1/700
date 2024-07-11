@@ -35,16 +35,19 @@ s_prime = np.cos(theta) + e*np.cos(2*theta)
 c_prime = -(np.sin(theta) + e*np.sin(2*theta))
 J = (h/p**2)*(t - t0)
 
-STM_ip = np.array([
-    [1, -c*(1+1/rho), s*(1+1/rho), J*3*(rho**2)],
-    [0, s, c, (2 - 3*e*s*J)],
-    [0, 2*s, 2*c-e, 3*(1 - 2*e*s*J)],
-    [0, s_prime, c_prime, -3*e*(s_prime*J + s/(rho**2))]
+STM = np.array([
+    [1, 0, -c*(1+1/rho), s*(1+1/rho), 0, J*3*(rho**2)],
+    [0, c/rho, 0, 0, s/rho, 0],
+    [0, 0, s, c, 0, (2 - 3*e*s*J)],
+    [0, 0, 2*s, 2*c-e, 0, 3*(1 - 2*e*s*J)],
+    [0, -s/rho, 0, 0, c/rho, 0],
+    [0, 0, s_prime, c_prime, 0, -3*e*(s_prime*J + s/(rho**2))]
 ])
 
-STM_oop = STM_ip = (1/rho)*np.array([
-    [c, s],
-    [-s, c]
+STM_partial = np.array([
+    [s*(1+1/rho), 0, J*3*(rho**2)],
+    [0, s/rho, 0],
+    [c, 0, (2 - 3*e*s*J)]
 ])
 
 def step(self, action):

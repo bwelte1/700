@@ -77,6 +77,9 @@ class Earth2MarsEnv(gym.Env):
         self.v_ejection = v_ejection
         
         self.isDone = False
+
+        #State Transition Matrix Initialization
+        self.STM_Partial = np.eye(3)
                 
         # Timing
         self.time_step = self.mission_time / self.NSTEPS
@@ -111,6 +114,7 @@ class Earth2MarsEnv(gym.Env):
         a_ub = np.array([180., 180., 1.])
 
         self.action_space = spaces.Box(a_lb, a_ub, dtype=np.float64)
+
 
     def step(self, action):
         # Simulate one time step in the environment
@@ -169,7 +173,14 @@ class Earth2MarsEnv(gym.Env):
         
         if self.NSTEPS > self.training_steps:
             # TODO: Convert point within ellipsoid to targetable position
-            
+            STM_Current = self.updateSTM(self)
+
+            M_Ellipsoid = np.matmul(np.transpose(STM_Current),STM_Current)
+
+            eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
+
+            axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_Current)
+
             # TODO: Use pykep Lambert solver to calculate new velocity
             dv = 0
             pass
@@ -218,7 +229,50 @@ class Earth2MarsEnv(gym.Env):
     def Tsiolkovsky(self, dv):
         m_next = self.m_current*exp(-norm(dv)/self.v_ejection)
         return m_next
+    
+    def updateSTM(self):
+        #This may need to be translated in some way
+        r_vec = self.r_current
+        v_vec = self.v_current
+        r = norm(r_vec)
+        h_vec = cross(r_vec,v_vec)
+        h = norm(h_vec)
+        e_vec = (cross(v_vec,h_vec))/(self.amu) - (r_vec/norm(r_vec))
+        e = norm(e_vec)
+        theta = arccos(dot(r_vec,e_vec)/(r*e))
+        vr = dot(v_vec,(r_vec/norm(r_vec)))
+        if (vr < 0):
+            theta = 2*np.pi - theta
+
+        rho = 1 + e*np.cos(theta)
+        s = rho*np.cos(theta)
+        c = rho*np.cos(theta)
+        J = (h/rho**2)*(self.time_step)
+        STM_new = np.array([
+            [s*(1+1/rho), 0, J*3*(rho**2)],
+            [0, s/rho, 0],
+            [c, 0, (2 - 3*e*s*J)]
+        ])
+        return STM_new
         
+    
+    def getEllipseAxes(self,eigenvalues,eigenvectors,STM):
+        '''
+        Returns the major and both minor axes of ellipsoid.
+        x-axis is semimajor axis.
+        z-axis is smaller semiminor axis.
+        axes = [x,y,z]
+        '''
+        axes = np.zeros((3, eigenvectors.shape[1]))
+        axes_sorted = np.zeros((3, eigenvectors.shape[1]))
+        norms = np.zeros((3, eigenvectors.shape[1]))
+        for i in range(eigenvectors.shape[1]):
+            axes[i] = self.max_thrust*np.dot(STM,eigenvectors[:,i])
+            norms[i] = norm(axes[i])
+
+        norm_indices_s = np.argsort(-norms)
+        axes_sorted = axes[:, norm_indices_s]
+        return axes_sorted
 
 
 # if __name__ == '__main__':
