@@ -134,3 +134,5 @@ if __name__ == '__main__':
         device='auto', 
         _init_setup_model=_init_setup_model
     )
+
+# TODO: Plot trajectory

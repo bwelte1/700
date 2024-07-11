@@ -106,9 +106,9 @@ class Earth2MarsEnv(gym.Env):
         
         """ ACTION SPACE """
         # Lower bounds
-        a_lb = np.array([-1., -1., -1.])
+        a_lb = np.array([-180., -180., -1.])
         # Upper bounds
-        a_ub = np.array([1., 1., 1.])
+        a_ub = np.array([180., 180., 1.])
 
         self.action_space = spaces.Box(a_lb, a_ub, dtype=np.float64)
 
@@ -164,8 +164,8 @@ class Earth2MarsEnv(gym.Env):
         return reward
         
     def propagation_step(self, action):
-        # Position and velocity at the next time step given no dv
-        r_next_list, v_next_list = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof = self.time_step, mu = self.amu)
+        # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
+        r_next, v_next = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof = self.time_step, mu = self.amu)
         
         if self.NSTEPS > self.training_steps:
             # TODO: Convert point within ellipsoid to targetable position
@@ -184,10 +184,6 @@ class Earth2MarsEnv(gym.Env):
         
         # Spacecraft mass at the next time step
         m_next = self.Tsiolkovsky(dv)
-        
-        # TODO: Return position and velocity arrays
-        r_next = array(r_next_list)
-        v_next = array(v_next_list)
         
         return r_next, v_next, m_next, dv
     
