@@ -22,3 +22,6 @@ stats_window_size           100
 verbose                     0
 _init_setup_model           1
 Tmax                        0.5e-3
+start_date_julian           0
+tof                         500
+m_initial                   1000

@@ -4,7 +4,6 @@ import os
 from distutils.util import strtobool
 import random
 
-
 import stable_baselines3
 from stable_baselines3.ppo import PPO
 import gymnasium as gym
@@ -15,6 +14,10 @@ import torch.nn.modules.activation as F
 from torch.optim import Adam
 
 import numpy as np
+
+import pykep as pk
+from pykep.planet import _base
+from pykep.core import epoch, lambert_problem
 
 from e2m_env_no_reachability import Earth2MarsEnv
 
@@ -76,30 +79,37 @@ if __name__ == '__main__':
     mconv = 1000.                   # mass, kg
     aconv = vconv/tconv             # acceleration, km/s^2
     fconv = mconv*aconv             # force, kN
-    v_ejecection = 50               # propellant ejection velocity
+    v_ejecection = 50               # propellant ejection velocity #TODO Change
     
-    # Initial Conditions TODO: CHANGE LATER
-    r0 = [0, 0, 0]
-    v0 = [0, 0, 0]
-    m0 = 1000
-    rT = [1, 1, 1]
-    vT = [1, 1, 1]
+    ## INITIAL CONDITIONS ##
+    # planet models
+    earth = jpl_lp('earth')
+    mars = jpl_lp('mars')
     
-    # MISSION TIME
-    mission_time = 500
+    # Timing
+    start_date_julian = int(start_date_julian)  # departure date from earth
+    departure_date_e = epoch(start_date_julian)
+    tof = int(tof)      # predetermined TOF
+    arrival_date_e = epoch(tof+start_date_julian)
+    
+    # physical conditions
+    r0, v0 = earth.eph(departure_date_e)
+    rT, vT = mars.eph(arrival_date_e)
+    m0 = float(m_initial)
+    # Can do lambert from earth to mars and get v1 and v2
     
     env = Earth2MarsEnv(
         NSTEPS=NSTEPS, 
         NITERS=NITERS, 
         amu=amu, 
-        mission_time=mission_time, 
         v0=v0, 
         r0=r0, 
         vT=vT, 
         rT=rT, 
         m0=m0, 
         max_thrust=Tmax,
-        v_ejection=v_ejecection
+        v_ejection=v_ejecection,
+        mission_time=tof
     )
     
     policy_kwargs = {
