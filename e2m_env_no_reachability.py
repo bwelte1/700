@@ -168,21 +168,26 @@ class Earth2MarsEnv(gym.Env):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
         r_next, v_next = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof = self.TIME_STEP, mu = self.amu)
         
-        if self.NSTEPS > self.training_steps:
+        if (self.NSTEPS-1) > self.training_steps:
             # TODO: Convert point within ellipsoid to targetable position, nb ellipsoid must be mapped somewhere with eigenvalues
             
             # TODO: Use pykep Lambert solver to calculate new velocity
             dv = 0
             pass
         
-        # FINAL STEP
         else:  
+            # Step to mars (step N-1)
             final_step_lambert = lambert_problem(r1=self.r_current, r2=self.rT, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
-            # TODO: Calculate required dv with lambert
-            self.isDone = True    
+            lambert_v1 = final_step_lambert.get_v1()[0]
+            dv_N_minus_1 = lambert_v1 - self.v_current
+            m_next = self.Tsiolkovsky(dv_N_minus_1)
+
+            # Equalization with mars (step N)
+            lambert_v2 = final_step_lambert.get_v2()[0]
+            dv_equalization = self.vT - lambert_v2 # velocity of mars - velocity at final step 
+            m_next = self.Tsiolkovsky(dv_equalization)
             
-            dv_equalization = self.vT - final_v # velocity of mars - velocity at final step 
-            m_next = self.Tsiolkovsky(dv)
+            self.isDone = True  
         
         
         # Spacecraft mass at the next time step
