@@ -6,7 +6,8 @@ from numpy.linalg import norm
 from numpy import sqrt, log, exp, cos, sin, arccos, cross, dot, array
 
 import pykep as pk
-from pykep.core import propagate_lagrangian, propagate_taylor, ic2par, ic2eq
+from pykep import DAY2SEC
+from pykep.core import propagate_lagrangian, ic2par, ic2eq, lambert_problem
 
 import stable_baselines3
 from stable_baselines3.common.env_checker import check_env
@@ -79,7 +80,7 @@ class Earth2MarsEnv(gym.Env):
         self.isDone = False
                 
         # Timing
-        self.time_step = self.mission_time / self.NSTEPS
+        self.TIME_STEP = self.mission_time / self.NSTEPS
         self.training_steps = 0
         
         """ ENVIRONMENT BOUNDARIES """
@@ -142,7 +143,7 @@ class Earth2MarsEnv(gym.Env):
         self.r_current = r_next
         self.v_current = v_next
         self.m_current -= m_next
-        self.time_passed += self.time_step
+        self.time_passed += self.TIME_STEP
         
         obs = array([self.r_current[0], self.r_current[1], self.r_current[2], \
                 self.v_current[0], self.v_current[1], self.v_current[2], \
@@ -165,10 +166,10 @@ class Earth2MarsEnv(gym.Env):
         
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
-        r_next, v_next = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof = self.time_step, mu = self.amu)
+        r_next, v_next = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof = self.TIME_STEP, mu = self.amu)
         
         if self.NSTEPS > self.training_steps:
-            # TODO: Convert point within ellipsoid to targetable position
+            # TODO: Convert point within ellipsoid to targetable position, nb ellipsoid must be mapped somewhere with eigenvalues
             
             # TODO: Use pykep Lambert solver to calculate new velocity
             dv = 0
@@ -176,11 +177,13 @@ class Earth2MarsEnv(gym.Env):
         
         # FINAL STEP
         else:  
-            r_next = self.rT    # Next position is mars
+            final_step_lambert = lambert_problem(r1=self.r_current, r2=self.rT, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
             # TODO: Calculate required dv with lambert
             self.isDone = True    
+            
+            dv_equalization = self.vT - final_v # velocity of mars - velocity at final step 
+            m_next = self.Tsiolkovsky(dv)
         
-        # TODO: Add a final final step to equalize velocity with mars
         
         # Spacecraft mass at the next time step
         m_next = self.Tsiolkovsky(dv)
