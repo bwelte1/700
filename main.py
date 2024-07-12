@@ -79,7 +79,7 @@ if __name__ == '__main__':
     mconv = 1000.                   # mass, kg
     aconv = vconv/tconv             # acceleration, km/s^2
     fconv = mconv*aconv             # force, kN
-    v_ejecection = 50               # propellant ejection velocity #TODO Change
+    v_ejection = 50               # propellant ejection velocity #TODO Change
     
     ## INITIAL CONDITIONS ##
     # planet models
@@ -108,7 +108,7 @@ if __name__ == '__main__':
         rT=rT, 
         m0=m0, 
         max_thrust=Tmax,
-        v_ejection=v_ejecection,
+        v_ejection=v_ejection,
         mission_time=tof
     )
     
