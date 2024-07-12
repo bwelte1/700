@@ -56,7 +56,6 @@ if __name__ == '__main__':
     init_clip_range = float(init_clip_range)
     ent_coef = float(ent_coef)
     nminibatches = int(nminibatches)
-    NITERS = int(NITERS)
     n_steps = int(NSTEPS*nminibatches)
     gamma = float(gamma)
     gae_lambda = float(gae_lambda)
@@ -100,7 +99,6 @@ if __name__ == '__main__':
     
     env = Earth2MarsEnv(
         NSTEPS=NSTEPS, 
-        NITERS=NITERS, 
         amu=amu, 
         v0=v0, 
         r0=r0, 

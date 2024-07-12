@@ -21,7 +21,6 @@ class Earth2MarsEnv(gym.Env):
 
     Class inputs:
         - NSTEPS:           Number of trajectory segments
-        - NITERS:           Number of training iterations
         - amu:              Gravitational constant of central body
         - mission_time:     total mission time, s
         - v0:               initial velocity, km/s, list 
@@ -62,13 +61,12 @@ class Earth2MarsEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
     """ CLASS CONSTRUCTOR """
-    def __init__(self, NSTEPS, NITERS, amu, mission_time, v0, r0, vT, rT, m0, max_thrust, v_ejection):
+    def __init__(self, NSTEPS, amu, mission_time, v0, r0, vT, rT, m0, max_thrust, v_ejection):
         super(Earth2MarsEnv, self).__init__()
         # Initialize environment parameters
         self.v0 = array(v0)
         self.r0 = array(r0)
         self.NSTEPS = NSTEPS
-        self.NITERS = NITERS
         self.amu = amu
         self.mission_time = mission_time
         self.vT = vT
@@ -283,6 +281,6 @@ class Earth2MarsEnv(gym.Env):
 
 
 # if __name__ == '__main__':
-#     env = Earth2MarsEnv(NSTEPS=10, NITERS=20, amu=5, mission_time=500, v0 = array([0,0,0]), r0=array([0,0,0]), vT=[1,1,1], rT=[1,1,1], m0=1000, max_thrust=0.005)
+#     env = Earth2MarsEnv(NSTEPS=10, amu=5, mission_time=500, v0 = array([0,0,0]), r0=array([0,0,0]), vT=[1,1,1], rT=[1,1,1], m0=1000, max_thrust=0.005)
 #     # If the environment don't follow the interface, an error will be thrown
 #     check_env(env, warn=True)

@@ -8,7 +8,6 @@ init_clip_range             0.0480
 ent_coef                    0.0
 nminibatches                4
 policy                      MlpPolicy
-NITERS                      32e6
 gamma                       0.9999
 gae_lambda                  0.95
 n_epochs                    10
