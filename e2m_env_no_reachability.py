@@ -12,6 +12,7 @@ from pykep.core import propagate_lagrangian, ic2par, ic2eq, lambert_problem
 import stable_baselines3
 from stable_baselines3.common.env_checker import check_env
 
+import YA
 
 """ RL ENVIRONMENT CLASS """
 class Earth2MarsEnv(gym.Env):
@@ -76,9 +77,6 @@ class Earth2MarsEnv(gym.Env):
         self.v_ejection = v_ejection
         
         self.isDone = False
-
-        #State Transition Matrix Initialization
-        self.STM_Partial = np.eye(3)
                 
         # Timing
         self.TIME_STEP = self.mission_time / self.NSTEPS
@@ -168,11 +166,12 @@ class Earth2MarsEnv(gym.Env):
         
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
-        r_next, v_next = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof = self.TIME_STEP, mu = self.amu)
+        r_next, v_next = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof = tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
         
         if (self.NSTEPS-1) > self.training_steps:
             # TODO: Convert point within ellipsoid to targetable position
-            STM_Current = self.updateSTM(self)
+            state0 = self.r_current + self.v_current
+            STM_Current = YA.YA_STM(state0, tof=(self.TIME_STEP*DAY2SEC), self.amu)
 
             M_Ellipsoid = np.matmul(np.transpose(STM_Current),STM_Current)
 
@@ -234,33 +233,7 @@ class Earth2MarsEnv(gym.Env):
     def Tsiolkovsky(self, dv):
         m_next = self.m_current*exp(-norm(dv)/self.v_ejection)
         return m_next
-    
-    def updateSTM(self):
-        #This may need to be translated in some way
-        r_vec = self.r_current
-        v_vec = self.v_current
-        r = norm(r_vec)
-        h_vec = cross(r_vec,v_vec)
-        h = norm(h_vec)
-        e_vec = (cross(v_vec,h_vec))/(self.amu) - (r_vec/norm(r_vec))
-        e = norm(e_vec)
-        theta = arccos(dot(r_vec,e_vec)/(r*e))
-        vr = dot(v_vec,(r_vec/norm(r_vec)))
-        if (vr < 0):
-            theta = 2*np.pi - theta
 
-        rho = 1 + e*np.cos(theta)
-        s = rho*np.cos(theta)
-        c = rho*np.cos(theta)
-        J = (h/rho**2)*(self.time_step)
-        STM_new = np.array([
-            [s*(1+1/rho), 0, J*3*(rho**2)],
-            [0, s/rho, 0],
-            [c, 0, (2 - 3*e*s*J)]
-        ])
-        return STM_new
-        
-    
     def getEllipseAxes(self,eigenvalues,eigenvectors,STM):
         '''
         Returns the major and both minor axes of ellipsoid.
@@ -278,6 +251,32 @@ class Earth2MarsEnv(gym.Env):
         norm_indices_s = np.argsort(-norms)
         axes_sorted = axes[:, norm_indices_s]
         return axes_sorted
+    
+    # def updateSTM(self):
+    #     #This may need to be translated in some way
+    #     r_vec = self.r_current
+    #     v_vec = self.v_current
+    #     r = norm(r_vec)
+    #     h_vec = cross(r_vec,v_vec)
+    #     h = norm(h_vec)
+    #     e_vec = (cross(v_vec,h_vec))/(self.amu) - (r_vec/norm(r_vec))
+    #     e = norm(e_vec)
+    #     theta = arccos(dot(r_vec,e_vec)/(r*e))
+    #     vr = dot(v_vec,(r_vec/norm(r_vec)))
+    #     if (vr < 0):
+    #         theta = 2*np.pi - theta
+
+    #     rho = 1 + e*np.cos(theta)
+    #     s = rho*np.cos(theta)
+    #     c = rho*np.cos(theta)
+    #     J = (h/rho**2)*(self.time_step)
+    #     STM_new = np.array([
+    #         [s*(1+1/rho), 0, J*3*(rho**2)],
+    #         [0, s/rho, 0],
+    #         [c, 0, (2 - 3*e*s*J)]
+    #     ])
+    #     return STM_new
+        
 
 
 # if __name__ == '__main__':
