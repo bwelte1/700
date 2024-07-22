@@ -166,21 +166,27 @@ class Earth2MarsEnv(gym.Env):
         
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
-        r_next, v_next = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof = tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
+        r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof = (self.TIME_STEP*DAY2SEC), mu = self.amu)
         
         if (self.NSTEPS-1) > self.training_steps:
             # TODO: Convert point within ellipsoid to targetable position
             state0 = self.r_current + self.v_current
-            STM_Current = YA.YA_STM(state0, tof=(self.TIME_STEP*DAY2SEC), self.amu)
+            STM_Current = YA.YA_STM(state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
 
             M_Ellipsoid = np.matmul(np.transpose(STM_Current),STM_Current)
 
             eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
 
+            #Gets body-centric ellipse axes
             axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_Current)
 
-            # TODO: Use pykep Lambert solver to calculate new velocity
-            dv = 0
+            offset_position = self.action2pos(self, axes, action)
+
+            r_next = [a + b for a, b in zip(r_centre, offset_position)]
+
+            final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
+            v_next = final_step_lambert.get_v2()[0]
+            dv = v_next - self.v_current
             pass
         
         else:  
@@ -241,9 +247,11 @@ class Earth2MarsEnv(gym.Env):
         z-axis is smaller semiminor axis.
         axes = [x,y,z]
         '''
+        #Initialising arrays
         axes = np.zeros((3, eigenvectors.shape[1]))
         axes_sorted = np.zeros((3, eigenvectors.shape[1]))
-        norms = np.zeros((3, eigenvectors.shape[1]))
+        norms = np.zeros(3, 1)
+
         for i in range(eigenvectors.shape[1]):
             axes[i] = self.max_thrust*np.dot(STM,eigenvectors[:,i])
             norms[i] = norm(axes[i])
@@ -251,6 +259,26 @@ class Earth2MarsEnv(gym.Env):
         norm_indices_s = np.argsort(-norms)
         axes_sorted = axes[:, norm_indices_s]
         return axes_sorted
+
+    def action2pos(self, axes, action):
+        #Denormalising
+        yaw = action[0] * np.pi                 # [-π to π]
+        pitch = action[1] * (np.pi)             # [-π to π]
+        r = (action[2] + 1) / 2                 # [0 to 1]
+        
+        # Spherical to Cartesian
+        x = r * np.cos(pitch) * np.cos(yaw)
+        y = r * np.cos(pitch) * np.sin(yaw)
+        z = r * np.sin(pitch)
+        
+        # Map the Cartesian coordinates to the ellipsoid axes
+        pos = x * axes[:, 0] + y * axes[:, 1] + z * axes[:, 2]
+        
+        #Eliminating very small values
+        pos[np.abs(pos) < 1e-10] = 0
+
+        return pos
+
     
     # def updateSTM(self):
     #     #This may need to be translated in some way
