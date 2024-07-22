@@ -166,24 +166,31 @@ class Earth2MarsEnv(gym.Env):
         
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
-        r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, (self.TIME_STEP*DAY2SEC), mu = self.amu)
+        r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
         
         if (self.NSTEPS-1) > self.training_steps:
-            # TODO: Convert point within ellipsoid to targetable position
             state0 = self.r_current + self.v_current
-            STM_Current = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
 
+            #Gets current STM
+            STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
+
+            #Obtains useful STM Quadrant
+            STM_Current = STM_Current_Full[0:3, 3:6]
+            
+            #Creates characteristic ellipsoid matrix and performs eigendecomposition
             M_Ellipsoid = np.matmul(np.transpose(STM_Current),STM_Current)
-
             eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
 
             #Gets body-centric ellipse axes
             axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_Current)
 
+            #Maps action to points within ellipse to find distance from centre of ellipse
             offset_position = self.action2pos(self, axes, action)
-
+            
+            #Adds offset to centre position
             r_next = [a + b for a, b in zip(r_centre, offset_position)]
 
+            #Finds velocity at next stage using lambert and produces dv
             final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
             v_next = final_step_lambert.get_v2()[0]
             dv = v_next - self.v_current
