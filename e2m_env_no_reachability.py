@@ -166,12 +166,12 @@ class Earth2MarsEnv(gym.Env):
         
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
-        r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof = (self.TIME_STEP*DAY2SEC), mu = self.amu)
+        r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, (self.TIME_STEP*DAY2SEC), mu = self.amu)
         
         if (self.NSTEPS-1) > self.training_steps:
             # TODO: Convert point within ellipsoid to targetable position
             state0 = self.r_current + self.v_current
-            STM_Current = YA.YA_STM(state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
+            STM_Current = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
 
             M_Ellipsoid = np.matmul(np.transpose(STM_Current),STM_Current)
 
