@@ -5,6 +5,9 @@ import numpy as np
 from numpy.linalg import norm
 from numpy import sqrt, log, exp, cos, sin, arccos, cross, dot, array
 
+import matplotlib.pyplot as plt
+from matplotlib import use as mpl_use
+
 import pykep as pk
 from pykep import DAY2SEC
 from pykep.core import propagate_lagrangian, ic2par, ic2eq, lambert_problem
@@ -13,6 +16,8 @@ import stable_baselines3
 from stable_baselines3.common.env_checker import check_env
 
 import YA
+
+import os
 
 """ RL ENVIRONMENT CLASS """
 class Earth2MarsEnv(gym.Env):
@@ -62,7 +67,7 @@ class Earth2MarsEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
     """ CLASS CONSTRUCTOR """
-    def __init__(self, NSTEPS, amu, mission_time, v0, r0, vT, rT, m0, max_thrust, v_ejection):
+    def __init__(self, NSTEPS, amu, mission_time, v0, r0, vT, rT, m0, max_thrust, v_ejection, using_reachability):
         super(Earth2MarsEnv, self).__init__()
         # Initialize environment parameters
         self.v0 = array(v0)
@@ -75,6 +80,7 @@ class Earth2MarsEnv(gym.Env):
         self.m0 = m0
         self.max_thrust = max_thrust
         self.v_ejection = v_ejection
+        self.using_reachability = using_reachability
         
         self.isDone = False
                 
@@ -84,7 +90,7 @@ class Earth2MarsEnv(gym.Env):
         
         """ ENVIRONMENT BOUNDARIES """
         coe0 = ic2par(r = self.r0, v = self.v0, mu = self.amu)    # initial classical orbital element of the S/C
-        coeT = ic2par(r = self.rTf, v = self.vTf, mu = self.amu)  # classical orbital element of the target
+        coeT = ic2par(r = self.rT, v = self.vT, mu = self.amu)  # classical orbital element of the target
         rpT = coeT[0]*(1 - coeT[1])                               # periapsis radius of the target, km
         raT = coeT[0]*(1 + coeT[1])                               # apoapsis radius of the target, km
         vpT = sqrt(self.amu*(2./rpT - 1/coeT[0]))                 # periapsis velocity of the target, km/s
@@ -123,7 +129,7 @@ class Earth2MarsEnv(gym.Env):
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         
         # State at next time step and current control
-        r_next, v_next, m_next, u_current = self.propagation_step(action, self.dt)
+        r_next, v_next, m_next, dv = self.propagation_step(action)
             
         # Info (state at the beginning of the segment)
         self.sol['rx'] = self.r_current[0]
@@ -132,9 +138,6 @@ class Earth2MarsEnv(gym.Env):
         self.sol['vx'] = self.v_current[0]
         self.sol['vy'] = self.v_current[1]
         self.sol['vz'] = self.v_current[2]
-        self.sol['ux'] = u_current[0]
-        self.sol['uy'] = u_current[1]
-        self.sol['uz'] = u_current[2]
         self.sol['m'] = self.m_current
         self.sol['t'] = self.time_passed
         info = self.sol
@@ -153,7 +156,9 @@ class Earth2MarsEnv(gym.Env):
         
         reward = self.getReward(action)
         
-        return obs, reward, self.isDone, info
+        truncated = False       # necessary return of step, if step is cut off early due to timeout etcc.
+        
+        return obs, reward, self.isDone, truncated, info
     
     def getReward(self, action):
         # minimize fuel consumption
@@ -167,33 +172,40 @@ class Earth2MarsEnv(gym.Env):
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
         r_next, v_next = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
+        dv = 0
         
         if (self.NSTEPS-1) > self.training_steps:
-            # TODO: Convert point within ellipsoid to targetable position
-            state0 = self.r_current + self.v_current
-            STM_Current = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
+            if self.using_reachability == True:
+                # TODO: Convert point within ellipsoid to targetable position
+                state0 = self.r_current + self.v_current
+                STM_Current = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
 
-            M_Ellipsoid = np.matmul(np.transpose(STM_Current),STM_Current)
+                M_Ellipsoid = np.matmul(np.transpose(STM_Current),STM_Current)
 
-            eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
+                eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
 
-            axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_Current)
+                axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_Current)
 
-            # TODO: Use pykep Lambert solver to calculate new velocity
-            dv = 0
-            pass
+                # TODO: Use pykep Lambert solver to calculate new velocity
+                dv = 0
+            else: 
+                dv = 0
         
         else:  
             # Step to mars (step N-1)
             final_step_lambert = lambert_problem(r1=self.r_current, r2=self.rT, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
             lambert_v1 = final_step_lambert.get_v1()[0]
-            dv_N_minus_1 = lambert_v1 - self.v_current
-            m_next = self.Tsiolkovsky(dv_N_minus_1)
+            dv_N_minus_1 = array(lambert_v1) - array(self.v_current)
+            m_next = self.Tsiolkovsky(array(dv_N_minus_1))
 
             # Equalization with mars (step N)
             lambert_v2 = final_step_lambert.get_v2()[0]
-            dv_equalization = self.vT - lambert_v2 # velocity of mars - velocity at final step 
-            m_next = self.Tsiolkovsky(dv_equalization)
+            dv_equalization = array(self.vT) - array(lambert_v2) # velocity of mars - velocity at final step 
+            m_next = self.Tsiolkovsky(array(dv_equalization))
+            pk.orbit_plots.plot_lambert(final_step_lambert, sol=0, legend=True)
+            plot_path = os.path.join("Plots", "test_path1.png")
+            plt.savefig(plot_path)
+            print(f"Plot saved as {plot_path}")
             
             self.isDone = True  
         
@@ -204,7 +216,7 @@ class Earth2MarsEnv(gym.Env):
     
         
         
-    def reset(self):
+    def reset(self, seed=None, options=None):
         self.r_current = self.r0
         self.v_current = self.v0
         self.m_current = self.m0
@@ -222,7 +234,9 @@ class Earth2MarsEnv(gym.Env):
                 self.v_current[0], self.v_current[1], self.v_current[2], \
                 self.m_current, self.time_passed]).astype(np.float64)
         
-        return obs
+        info = {}
+        
+        return obs, info
     
     def render(self, mode='human', close=False):
         pass

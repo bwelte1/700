@@ -11,7 +11,7 @@ policy                      MlpPolicy
 gamma                       0.9999
 gae_lambda                  0.95
 n_epochs                    10
-batch_size                  64
+batch_size                  40
 f_coef                      0.5
 max_grad_norm               0.5
 use_sde                     0
@@ -24,3 +24,4 @@ Tmax                        0.5e-3
 start_date_julian           0
 tof                         500
 m_initial                   1000
+using_reachability          0
