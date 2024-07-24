@@ -14,10 +14,13 @@ import torch.nn.modules.activation as F
 from torch.optim import Adam
 
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import use as mpl_use
 
 import pykep as pk
-from pykep.planet import _base
+from pykep.planet import _base, jpl_lp
 from pykep.core import epoch, lambert_problem
+from pykep import MU_SUN
 
 from e2m_env_no_reachability import Earth2MarsEnv
 
@@ -25,6 +28,13 @@ from e2m_env_no_reachability import Earth2MarsEnv
     
 if __name__ == '__main__': 
     env_id = "700Project"
+    
+    subfolder = "Plots"
+    if not os.path.exists(subfolder):
+        os.makedirs(subfolder)
+    mpl_use('Agg')
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
     
     #Input settings file
     parser = argparse.ArgumentParser()
@@ -71,7 +81,7 @@ if __name__ == '__main__':
     _init_setup_model = bool(int(_init_setup_model))
     
     # Physical constants
-    amu = 132712440018.             # km^3/s^2, Gravitational constant of the central body
+    amu = MU_SUN                    # km^3/s^2, Gravitational constant of the central body
     rconv = 149600000.              # position, km
     vconv = np.sqrt(amu/rconv)      # velocity, km/s
     tconv = rconv/vconv             # time, s
@@ -97,6 +107,8 @@ if __name__ == '__main__':
     m0 = float(m_initial)
     # Can do lambert from earth to mars and get v1 and v2
     
+    using_reachability = bool(int(using_reachability))
+    
     env = Earth2MarsEnv(
         NSTEPS=NSTEPS, 
         amu=amu, 
@@ -107,9 +119,10 @@ if __name__ == '__main__':
         m0=m0, 
         max_thrust=Tmax,
         v_ejection=v_ejection,
-        mission_time=tof
+        mission_time=tof,
+        using_reachability=using_reachability
     )
-    
+        
     policy_kwargs = {
         'share_features_extractor': False
     }
@@ -127,7 +140,7 @@ if __name__ == '__main__':
         clip_range_vf=None, 
         normalize_advantage=normalize_advantage, 
         ent_coef=ent_coef,
-        f_coef=f_coef, 
+        vf_coef=f_coef, 
         max_grad_norm=max_grad_norm, 
         use_sde=use_sde, 
         sde_sample_freq=sde_sample_freq, 
@@ -135,12 +148,14 @@ if __name__ == '__main__':
         rollout_buffer_kwargs=None, 
         target_kl=None, 
         stats_window_size=stats_window_size, 
-        tensorboard_log=None, 
         policy_kwargs=policy_kwargs, 
         verbose=verbose, 
         seed=None, 
         device='auto', 
-        _init_setup_model=_init_setup_model
+        _init_setup_model=_init_setup_model,
+        tensorboard_log="./logs/"
     )
+    
+    model.learn(total_timesteps=10)
 
 # TODO: Plot trajectory
