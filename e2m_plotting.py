@@ -22,7 +22,7 @@ from pykep import DAY2SEC
 from pykep.orbit_plots import plot_lambert
 from pykep import MU_SUN
 
-from e2m_env_no_reachability import Earth2MarsEnv
+from e2m_env import Earth2MarsEnv
 
 import matplotlib.pyplot as plt
 from matplotlib import use as mpl_use

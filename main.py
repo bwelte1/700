@@ -23,7 +23,7 @@ from pykep.planet import _base, jpl_lp
 from pykep.core import epoch, lambert_problem
 from pykep import MU_SUN
 
-from e2m_env_no_reachability import Earth2MarsEnv
+from e2m_env import Earth2MarsEnv
     
 if __name__ == '__main__': 
     env_id = "700Project"
