@@ -173,7 +173,7 @@ if __name__ == '__main__':
         tensorboard_log="./logs/"
     )
     
-    model.learn(total_timesteps=1000000000)
+    model.learn(total_timesteps=300000)
 
     # Access the info logs after training
     info_logs = wrapped_env.get_info_logs()
