@@ -162,44 +162,47 @@ class Earth2MarsEnv(gym.Env):
     
     def getReward(self, action):
         # minimize fuel consumption
-        reward = self.m_current
-        
-        # Penalty: current action greater than maximum admissible
-        reward -= 100.*max(0., norm(action) - 1.)
+        reward = self.m_current - self.m0
         
         return reward
         
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
         r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
+        dv = 0
         
         if (self.NSTEPS-1) > self.training_steps:
-            state0 = self.r_current + self.v_current
+            if self.using_reachability == True:   
+                state0 = self.r_current + self.v_current
 
-            #Gets current STM
-            STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
+                #Gets current STM
+                STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
 
-            #Obtains useful STM Quadrant
-            STM_Current = STM_Current_Full[0:3, 3:6]
-            
-            #Creates characteristic ellipsoid matrix and performs eigendecomposition
-            M_Ellipsoid = np.matmul(np.transpose(STM_Current),STM_Current)
-            eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
+                #Obtains useful STM Quadrant
+                STM_Current = STM_Current_Full[0:3, 3:6]
+                
+                #Creates characteristic ellipsoid matrix and performs eigendecomposition
+                M_Ellipsoid = np.matmul(np.transpose(STM_Current),STM_Current)
+                eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
 
-            #Gets body-centric ellipse axes
-            axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_Current)
+                #Gets body-centric ellipse axes
+                axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_Current)
 
-            #Maps action to points within ellipse to find distance from centre of ellipse
-            offset_position = self.action2pos(self, axes, action)
-            
-            #Adds offset to centre position
-            r_next = [a + b for a, b in zip(r_centre, offset_position)]
+                #Maps action to points within ellipse to find distance from centre of ellipse
+                offset_position = self.action2pos(self, axes, action)
+                
+                #Adds offset to centre position
+                r_next = [a + b for a, b in zip(r_centre, offset_position)]
 
-            #Finds velocity at next stage using lambert and produces dv
-            final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
-            v_next = final_step_lambert.get_v2()[0]
-            dv = v_next - self.v_current
-            pass
+                #Finds velocity at next stage using lambert and produces dv
+                final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
+                v_next = final_step_lambert.get_v2()[0]
+                dv = v_next - self.v_current
+            else:
+                r_next = r_centre
+                v_next = v_centre
+                
+            m_next = self.Tsiolkovsky(array(dv))
         
         else:  
             # Step to mars (step N-1)
@@ -212,15 +215,12 @@ class Earth2MarsEnv(gym.Env):
             lambert_v2 = final_step_lambert.get_v2()[0]
             dv_equalization = array(self.vT) - array(lambert_v2) # velocity of mars - velocity at final step 
             m_next = self.Tsiolkovsky(array(dv_equalization))
-            pk.orbit_plots.plot_lambert(final_step_lambert, sol=0, legend=True)
-            plot_path = os.path.join("Plots", "test_path1.png")
-            plt.savefig(plot_path)
-            print(f"Plot saved as {plot_path}")
+            
+            r_next = self.rT
+            v_next = self.vT
+            print(m_next)
             
             self.isDone = True  
-        
-        # Spacecraft mass at the next time step
-        m_next = self.Tsiolkovsky(dv)
         
         return r_next, v_next, m_next, dv
     
@@ -236,7 +236,6 @@ class Earth2MarsEnv(gym.Env):
         # Reset parameters
         self.sol = {'rx': [], 'ry': [], 'rz': [],
                     'vx': [], 'vy': [], 'vz': [],
-                    'ux': [], 'uy': [], 'uz': [],
                     'm': [],
                     't': []}
         
@@ -329,3 +328,4 @@ class Earth2MarsEnv(gym.Env):
 #     env = Earth2MarsEnv(NSTEPS=10, amu=5, mission_time=500, v0 = array([0,0,0]), r0=array([0,0,0]), vT=[1,1,1], rT=[1,1,1], m0=1000, max_thrust=0.005)
 #     # If the environment don't follow the interface, an error will be thrown
 #     check_env(env, warn=True)
+
