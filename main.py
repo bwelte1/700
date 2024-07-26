@@ -14,6 +14,7 @@ import torch.nn.modules.activation as F
 from torch.optim import Adam
 
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import use as mpl_use
 
@@ -23,8 +24,6 @@ from pykep.core import epoch, lambert_problem
 from pykep import MU_SUN
 
 from e2m_env_no_reachability import Earth2MarsEnv
-
-# import matplotlib
     
 if __name__ == '__main__': 
     env_id = "700Project"
@@ -122,6 +121,24 @@ if __name__ == '__main__':
         mission_time=tof,
         using_reachability=using_reachability
     )
+    
+    class envLoggingWrapper(gym.Wrapper):
+        def __init__(self, env):
+            super(envLoggingWrapper, self).__init__(env)
+            self.info_logs = []
+
+        def step(self, action):
+            observation, reward, done, truncated, info = self.env.step(action)
+            self.info_logs.append(info)
+            return observation, reward, done, truncated, info
+
+        def reset(self, **kwargs):
+            return self.env.reset(**kwargs)
+
+        def get_info_logs(self):
+            return self.info_logs
+    
+    wrapped_env = envLoggingWrapper(env)
         
     policy_kwargs = {
         'share_features_extractor': False
@@ -129,7 +146,7 @@ if __name__ == '__main__':
 
     model = PPO(
         policy='MlpPolicy', 
-        env=env, 
+        env=wrapped_env, 
         learning_rate=init_learning_rate, 
         n_steps=n_steps, 
         batch_size=batch_size,
@@ -156,6 +173,30 @@ if __name__ == '__main__':
         tensorboard_log="./logs/"
     )
     
-    model.learn(total_timesteps=10)
+    model.learn(total_timesteps=1000000000)
+
+    # Access the info logs after training
+    info_logs = wrapped_env.get_info_logs()
+    # Extract rx, ry, and rz
+    rx_out = [log['rx'] for log in info_logs]
+    ry_out = [log['ry'] for log in info_logs]
+    rz_out = [log['rz'] for log in info_logs]
+    rx_out = np.array(rx_out)
+    ry_out = np.array(ry_out)
+    rz_out = np.array(rz_out)
+    
+    # Plotting the trajectory in 3D
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.plot(rx_out, ry_out, marker='o')
+
+    ax.set_xlabel('rx')
+    ax.set_ylabel('ry')
+    ax.set_title('Spacecraft Trajectory')
+
+    plot_path = os.path.join("Plots", "test_path1.png")
+    plt.savefig(plot_path)
+    print(f"Plot saved as {plot_path}")
 
 # TODO: Plot trajectory
