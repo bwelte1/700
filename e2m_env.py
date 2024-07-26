@@ -173,7 +173,7 @@ class Earth2MarsEnv(gym.Env):
         
         if (self.NSTEPS-1) > self.training_steps:
             if self.using_reachability == True:   
-                state0 = self.r_current + self.v_current
+                state0 = np.concatenate((self.r_current, self.v_current))
 
                 #Gets current STM
                 STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
