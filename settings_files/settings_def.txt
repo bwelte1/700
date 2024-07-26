@@ -24,4 +24,4 @@ Tmax                        0.5e-3
 start_date_julian           0
 tof                         500
 m_initial                   1000
-using_reachability          0
+using_reachability          1
