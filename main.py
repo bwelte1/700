@@ -175,8 +175,9 @@ if __name__ == '__main__':
     
     model.learn(total_timesteps=300000)
     
-    output_folder_root = "./saved_models"
-    model.save()
+    output_folder_root = "./saved_models/"
+    final_output_folder = output_folder_root + "final_model"
+    model.save(path=final_output_folder)
 
     # Access the info logs after training
     info_logs = wrapped_env.get_info_logs()
