@@ -1,5 +1,5 @@
 load_model                  1
-env_name                    e2m_no_reachability
+env_name                    e2m_env
 mission_name                Earth_Mars
 NSTEPS                      10
 num_cpu                     8
