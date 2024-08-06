@@ -176,6 +176,9 @@ class Earth2MarsEnv(gym.Env):
                 state0 = np.concatenate((self.r_current, self.v_current))
                 statef = np.concatenate((r_centre, v_centre))
 
+                print(state0)
+                print(statef)
+
                 delta_v_max_RTN = np.eye(3)
 
                 #Gets current STM
@@ -239,7 +242,6 @@ class Earth2MarsEnv(gym.Env):
             
             r_next = self.rT
             v_next = self.vT
-            print(m_next)
             
             self.isDone = True  
         

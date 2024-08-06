@@ -170,12 +170,12 @@ if __name__ == '__main__':
         seed=None, 
         device='auto', 
         _init_setup_model=_init_setup_model,
-        tensorboard_log="./logs/"
+        tensorboard_log=None #Logging disabled for debugging, to enable : "./logs/"
     )
     
-    model.learn(total_timesteps=300000)
+    model.learn(total_timesteps=1) #300k Good
     
-    output_folder_root = "./saved_models/"
-    final_output_folder = output_folder_root + "final_model"
-    model.save(path=final_output_folder)
+    # output_folder_root = "./saved_models/"
+    # final_output_folder = output_folder_root + "final_model"
+    # model.save(path=final_output_folder)
     
