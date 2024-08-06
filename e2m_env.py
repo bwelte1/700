@@ -174,19 +174,40 @@ class Earth2MarsEnv(gym.Env):
         if (self.NSTEPS-1) > self.training_steps:
             if self.using_reachability == True:   
                 state0 = np.concatenate((self.r_current, self.v_current))
+                statef = np.concatenate((r_centre, v_centre))
+
+                delta_v_max_RTN = np.eye(3)
 
                 #Gets current STM
                 STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
 
                 #Obtains useful STM Quadrant
                 STM_Current = STM_Current_Full[0:3, 3:6]
-                
-                #Creates characteristic ellipsoid matrix and performs eigendecomposition
-                M_Ellipsoid = np.matmul(np.transpose(STM_Current),STM_Current)
-                eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
 
-                #Gets body-centric ellipse axes
-                axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_Current)
+                #Obtains RTN State Transition Matrix
+                STM_RTN = np.dot(YA.DCM_LVLH2RTN(), STM_Current)
+
+                #Constructs Rotation Matrices
+                M_RTN2ECI_init = YA.RotMat_RTN2Inertial(state0)
+                M_RTN2ECI_init_T = np.transpose(YA.RotMat_RTN2Inertial(state0))
+                M_RTN2ECI_f = YA.RotMat_RTN2Inertial(statef)
+
+                #Obtains HCI Frame STM
+                STM_HCI = M_RTN2ECI_f @ STM_RTN @ M_RTN2ECI_init_T
+
+                delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
+
+                axes = np.dot(STM_HCI,delta_v_max_HCI)
+
+                #ALTERNATE REACHABILTY FORMULATION 
+                # #Creates characteristic ellipsoid matrix and performs eigendecomposition
+                # M_Ellipsoid = np.matmul(np.transpose(STM_RTN),STM_RTN)
+                # eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
+
+                #HCI_eigvecs = M_RTN2ECI_f @ eigvecs
+
+                # #Gets body-centric ellipse axes
+                # axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_RTN)
 
                 #Maps action to points within ellipse to find distance from centre of ellipse
                 offset_position = self.action2pos(self, axes, action)
