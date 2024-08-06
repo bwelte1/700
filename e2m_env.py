@@ -210,7 +210,7 @@ class Earth2MarsEnv(gym.Env):
                 # axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_RTN)
 
                 #Maps action to points within ellipse to find distance from centre of ellipse
-                offset_position = self.action2pos(self, axes, action)
+                offset_position = self.action2pos(axes, action)
                 
                 #Adds offset to centre position
                 r_next = [a + b for a, b in zip(r_centre, offset_position)]
@@ -218,7 +218,7 @@ class Earth2MarsEnv(gym.Env):
                 #Finds velocity at next stage using lambert and produces dv
                 final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 v_next = final_step_lambert.get_v2()[0]
-                dv = v_next - self.v_current
+                dv = np.subtract(v_next,self.v_current)
             else:
                 r_next = r_centre
                 v_next = v_centre
