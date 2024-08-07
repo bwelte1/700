@@ -176,8 +176,8 @@ class Earth2MarsEnv(gym.Env):
                 state0 = np.concatenate((self.r_current, self.v_current))
                 statef = np.concatenate((r_centre, v_centre))
 
-                print(state0)
-                print(statef)
+                # print(state0)
+                # print(statef)
 
                 delta_v_max_RTN = np.eye(3)
 
@@ -303,7 +303,7 @@ class Earth2MarsEnv(gym.Env):
     def action2pos(self, axes, action):
         #Denormalising
         yaw = action[0] * np.pi                 # [-π to π]
-        pitch = action[1] * (np.pi)             # [-π to π]
+        pitch = action[1] * ((np.pi) / 2)       # [-π/2 to π/2]
         r = (action[2] + 1) / 2                 # [0 to 1]
         
         # Spherical to Cartesian

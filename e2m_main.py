@@ -24,6 +24,27 @@ from pykep.core import epoch, lambert_problem
 from pykep import MU_SUN
 
 from e2m_env import Earth2MarsEnv
+
+def plotRun(state_logs,r0,rT):
+
+    positions = [state[:3] for state in state_logs]
+    positions.insert(0, [r0[0], r0[1], r0[2]])
+    x_coords, y_coords, z_coords = zip(*positions)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.plot(x_coords, y_coords, z_coords, c='k', marker='o')
+    ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100)  # Sun at origin
+    ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50)  # Earth
+    ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Mars
+
+    ax.set_xlabel('X Position (km)')
+    ax.set_ylabel('Y Position (km)')
+    ax.set_zlabel('Z Position (km)')
+    ax.set_title('Spacecraft Position Relative to the Sun')
+
+    plt.show()
     
 if __name__ == '__main__': 
     env_id = "700Project"
@@ -31,7 +52,7 @@ if __name__ == '__main__':
     subfolder = "Plots"
     if not os.path.exists(subfolder):
         os.makedirs(subfolder)
-    mpl_use('Agg')
+    mpl_use('Qt5Agg')
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     
@@ -104,6 +125,8 @@ if __name__ == '__main__':
     r0, v0 = earth.eph(departure_date_e)
     rT, vT = mars.eph(arrival_date_e)
     m0 = float(m_initial)
+
+    print([r0, v0, rT, vT, m0])
     # Can do lambert from earth to mars and get v1 and v2
     
     using_reachability = bool(int(using_reachability))
@@ -126,10 +149,12 @@ if __name__ == '__main__':
         def __init__(self, env):
             super(envLoggingWrapper, self).__init__(env)
             self.info_logs = []
+            self.state_logs = []
 
         def step(self, action):
             observation, reward, done, truncated, info = self.env.step(action)
             self.info_logs.append(info)
+            self.state_logs.append(observation)
             return observation, reward, done, truncated, info
 
         def reset(self, **kwargs):
@@ -137,6 +162,9 @@ if __name__ == '__main__':
 
         def get_info_logs(self):
             return self.info_logs
+        
+        def get_state_logs(self):
+            return self.state_logs
     
     wrapped_env = envLoggingWrapper(env)
         
@@ -174,8 +202,14 @@ if __name__ == '__main__':
     )
     
     model.learn(total_timesteps=1) #300k Good
+
+    Run_log = wrapped_env.get_state_logs()
+    plotRun(Run_log,r0,rT)
     
     # output_folder_root = "./saved_models/"
     # final_output_folder = output_folder_root + "final_model"
     # model.save(path=final_output_folder)
+
+
+        
     
