@@ -110,8 +110,8 @@ if __name__ == '__main__':
     fconv = mconv*aconv             # force, kN
     v_ejection = 50               # propellant ejection velocity #TODO Change
     
-    ## INITIAL CONDITIONS ##
-    # planet models
+    # ## INITIAL CONDITIONS ##
+    # # planet models
     earth = jpl_lp('earth')
     mars = jpl_lp('mars')
     
@@ -120,11 +120,15 @@ if __name__ == '__main__':
     departure_date_e = epoch(start_date_julian)
     tof = int(tof)      # predetermined TOF
     arrival_date_e = epoch(tof+start_date_julian)
-    
-    # physical conditions
-    r0, v0 = earth.eph(departure_date_e)
-    rT, vT = mars.eph(arrival_date_e)
+
+    #Same init conds as Zavoli Federici Table 1
+    r0 = (-140699693.0, -51614428.0, 980.0)
+    v0 = (9.774596, -28.07828, 4.337725e-4)
+    rT = (172682023.0, 176959469.0, 7948912.0)
+    vT = (-16.427384, -14.860506, 9.21486e-2)
     m0 = float(m_initial)
+    
+    tof = int(tof)
 
     print([r0, v0, rT, vT, m0])
     # Can do lambert from earth to mars and get v1 and v2
@@ -202,7 +206,6 @@ if __name__ == '__main__':
     )
     
     model.learn(total_timesteps=1) #300k Good
-
     Run_log = wrapped_env.get_state_logs()
     plotRun(Run_log,r0,rT)
     

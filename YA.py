@@ -496,11 +496,12 @@ def YA_STM(state0: np.ndarray, tof: float, mu: float) -> np.ndarray:
     :param mu: Gravitational parameter of the central body [km^3/s^2] (or normalised)
     :return: YA STM
     """
-
+    print("Building STM")
     # Convert the state vector to the classical orbital elements
     # As the initial state is in [km, km/s], the output will be in [km, rad]
     a, e, i, RAAN, omega, TA0 = rv2coe(state0, mu)
-
+    print(a)
+    print(e)
     # Constants
     n = np.sqrt(mu / a ** 3)  # mean motion [1/s]
     p = a * (1 - e ** 2)  # semi-latus rectum [km]
@@ -570,8 +571,15 @@ def YA_STM(state0: np.ndarray, tof: float, mu: float) -> np.ndarray:
     ])
 
     # YA STM
+    print(rho)
+    print(inv_Ps_Transform)
+    print(trans_Matrix)
+    print(ps_Matrix)
+    print(ps_Transform)
+
     STM = inv_Ps_Transform @ trans_Matrix @ ps_Matrix @ ps_Transform
 
+    print(STM)
     # Eliminate values below the tolerance
     STM[np.abs(STM) < 1e-10] = 0.0
 
