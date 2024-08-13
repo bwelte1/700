@@ -126,6 +126,9 @@ class Earth2MarsEnv(gym.Env):
         # Compute reward based on new state
         # Return observation, reward, and done flag
         
+        #Clips action
+        action = np.clip(action, self.action_space.low, self.action_space.high)
+
         # Invalid action
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         
@@ -311,10 +314,11 @@ class Earth2MarsEnv(gym.Env):
 
     def action2pos(self, axes, action):
         print("Action: " + str(action))
-        #Denormalising
+        
+        #Denormalising angles
         yaw = action[0] * np.pi                 # [-π to π]
         pitch = action[1] * ((np.pi) / 2)       # [-π/2 to π/2]
-        r = (action[2] + 1) / 2                 # [0 to 1]
+        r = action[2]                           # [-1 to 1]
 
         print("Yaw, pitch, and r" + str([yaw, pitch, r]))
         
