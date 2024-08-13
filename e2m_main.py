@@ -108,8 +108,9 @@ if __name__ == '__main__':
     mconv = 1000.                   # mass, kg
     aconv = vconv/tconv             # acceleration, km/s^2
     fconv = mconv*aconv             # force, kN
-    v_ejection = 50               # propellant ejection velocity #TODO Change
-    
+    Isp = float(Isp)                # specific impulse of engine 
+    v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable
+
     # ## INITIAL CONDITIONS ##
     # # planet models
     earth = jpl_lp('earth')
@@ -121,7 +122,7 @@ if __name__ == '__main__':
     tof = int(tof)      # predetermined TOF
     arrival_date_e = epoch(tof+start_date_julian)
 
-    #Same init conds as Zavoli Federici Table 1
+    #Same init conds as Zavoli Federici Table 1 (km and km/s)
     r0 = (-140699693.0, -51614428.0, 980.0)
     v0 = (9.774596, -28.07828, 4.337725e-4)
     rT = (172682023.0, 176959469.0, 7948912.0)

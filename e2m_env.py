@@ -259,6 +259,7 @@ class Earth2MarsEnv(gym.Env):
         self.m_current = self.m0
         self.time_passed = 0.
         self.isDone = False
+        self.training_steps = 0
         
         # Reset parameters
         self.sol = {'rx': [], 'ry': [], 'rz': [],
