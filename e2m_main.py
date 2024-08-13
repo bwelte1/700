@@ -101,7 +101,7 @@ if __name__ == '__main__':
     _init_setup_model = bool(int(_init_setup_model))
     
     # Physical constants
-    amu = MU_SUN                    # km^3/s^2, Gravitational constant of the central body
+    amu = MU_SUN / 1e9              # km^3/s^2, Gravitational constant of the central body
     rconv = 149600000.              # position, km
     vconv = np.sqrt(amu/rconv)      # velocity, km/s
     tconv = rconv/vconv             # time, s

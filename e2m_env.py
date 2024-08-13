@@ -118,11 +118,9 @@ class Earth2MarsEnv(gym.Env):
 
         self.action_space = spaces.Box(a_lb, a_ub, dtype=np.float64)
 
-        print("Environment Created")
 
 
     def step(self, action):
-        print("Step Entered")
         # Simulate one time step in the environment
         # Update spacecraft state based on action
         # Compute reward based on new state
@@ -133,7 +131,6 @@ class Earth2MarsEnv(gym.Env):
         
         # State at next time step and current control
         r_next, v_next, m_next, dv = self.propagation_step(action)
-        print("Propagation Complete")
             
         # Info (state at the beginning of the segment)
         self.sol['rx'] = self.r_current[0]
@@ -161,7 +158,6 @@ class Earth2MarsEnv(gym.Env):
         reward = self.getReward(action)
         
         truncated = False       # necessary return of step, if step is cut off early due to timeout etcc.
-        print("Step Complete")
         return obs, reward, self.isDone, truncated, info
     
     def getReward(self, action):
@@ -174,14 +170,11 @@ class Earth2MarsEnv(gym.Env):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
         r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
         dv = 0
-        print("Propagation Vals:" + str(r_centre) + str(v_centre))
         if (self.NSTEPS-1) > self.training_steps:
             if self.using_reachability == True:   
                 state0 = np.concatenate((self.r_current, self.v_current))
                 statef = np.concatenate((r_centre, v_centre))
 
-                print(state0)
-                # print(statef)
 
                 delta_v_max_RTN = np.eye(3)
 
@@ -189,7 +182,7 @@ class Earth2MarsEnv(gym.Env):
                 STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 #Obtains useful STM Quadrant
                 STM_Current = STM_Current_Full[0:3, 3:6]
-                print("Useful untransformed STM: " + str(STM_Current))
+                #print("Useful untransformed STM: " + str(STM_Current))
 
                 #Obtains RTN State Transition Matrix
                 STM_RTN = np.dot(YA.DCM_LVLH2RTN(), STM_Current)
@@ -202,7 +195,7 @@ class Earth2MarsEnv(gym.Env):
                 #Obtains HCI Frame STM
                 STM_HCI = M_RTN2ECI_f @ STM_RTN @ M_RTN2ECI_init_T
 
-                print(STM_HCI)
+                #print(STM_HCI)
 
                 delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
 
@@ -217,22 +210,22 @@ class Earth2MarsEnv(gym.Env):
 
                 # #Gets body-centric ellipse axes
                 # axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_RTN)
-                print("Action: " + str(action))
+                #print("Action: " + str(action))
 
                 #Maps action to points within ellipse to find distance from centre of ellipse
                 offset_position = self.action2pos(axes, action)
-                print("Position Offset: " + str(offset_position))
+                #print("Position Offset: " + str(offset_position))
 
                 #Adds offset to centre position
                 r_next = [a + b for a, b in zip(r_centre, offset_position)]
-                print("Next Position: " + str(r_next))
+                #print("Next Position: " + str(r_next))
 
                 #Finds velocity at next stage using lambert and produces dv
                 final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 v_next = final_step_lambert.get_v2()[0]
-                print(v_next)
+                #print(v_next)
                 dv = np.subtract(v_next,self.v_current)
-                print("DeltaV: " + str(dv))
+                #print("DeltaV: " + str(dv))
             else:
                 r_next = r_centre
                 v_next = v_centre
