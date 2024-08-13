@@ -239,13 +239,14 @@ if __name__ == '__main__':
         seed=None, 
         device='auto', 
         _init_setup_model=_init_setup_model,
-        tensorboard_log=logdir #Logging disabled for debugging, to enable : logdir
+        tensorboard_log=logdir#Logging disabled for debugging, to enable : logdir
     )
     
-    Interval = 100  # Checkpoint interval
-    total_timesteps = 200  # Total timesteps for the entire training
+    Interval = 100000  # Checkpoint interval
+    total_timesteps = 300000 # One timestep specifies one impulse
     iters = total_timesteps // Interval
 
+    print("Learning Commenced")
     for i in range(iters):
         model.learn(total_timesteps=Interval, reset_num_timesteps=False, tb_log_name="Data")
         model.save(f"{models_dir}/{Interval*(i+1)}")

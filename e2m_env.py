@@ -110,11 +110,11 @@ class Earth2MarsEnv(gym.Env):
         
         self.observation_space = spaces.Box(o_lb, o_ub, dtype=np.float64)
         
-        """ ACTION SPACE """
+        """ ACTION SPACE [yaw, pitch, radius]"""
         # Lower bounds
-        a_lb = np.array([-180., -180., -1.])
+        a_lb = np.array([-1., -1., -1.])
         # Upper bounds
-        a_ub = np.array([180., 180., 1.])
+        a_ub = np.array([1., 1., 1.])
 
         self.action_space = spaces.Box(a_lb, a_ub, dtype=np.float64)
 
@@ -144,9 +144,9 @@ class Earth2MarsEnv(gym.Env):
         info = self.sol
         
         # Update the spacecraft state
-        print("Mass used: " + str(self.m_current) + " to " + str(m_next))
+        # print("Mass used: " + str(self.m_current) + " to " + str(m_next))
         reward = self.getReward(m_next)
-        print("Reward: " + str(reward))
+        # print("Reward: " + str(reward))
 
 
         self.r_current = r_next
@@ -159,6 +159,7 @@ class Earth2MarsEnv(gym.Env):
                 self.m_current, self.time_passed]).astype(np.float64)
         
         self.training_steps += 1
+        #print("Impulse Number : " + str(self.training_steps))
         
         truncated = False       # necessary return of step, if step is cut off early due to timeout etcc.
         return obs, reward, self.isDone, truncated, info
@@ -309,10 +310,13 @@ class Earth2MarsEnv(gym.Env):
         return axes_sorted
 
     def action2pos(self, axes, action):
+        print("Action: " + str(action))
         #Denormalising
         yaw = action[0] * np.pi                 # [-π to π]
         pitch = action[1] * ((np.pi) / 2)       # [-π/2 to π/2]
         r = (action[2] + 1) / 2                 # [0 to 1]
+
+        print("Yaw, pitch, and r" + str([yaw, pitch, r]))
         
         # Spherical to Cartesian
         x = r * np.cos(pitch) * np.cos(yaw)
