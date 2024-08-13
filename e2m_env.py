@@ -83,7 +83,7 @@ class Earth2MarsEnv(gym.Env):
         self.using_reachability = using_reachability
         
         self.isDone = False
-                
+        self.extra_info = {}
         # Timing
         self.TIME_STEP = self.mission_time / self.NSTEPS
         self.training_steps = 0
@@ -183,7 +183,7 @@ class Earth2MarsEnv(gym.Env):
                 statef = np.concatenate((r_centre, v_centre))
 
 
-                delta_v_max_RTN = np.eye(3)
+                delta_v_max_RTN = self.max_thrust*np.eye(3)
 
                 #Gets current STM
                 STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
@@ -205,8 +205,10 @@ class Earth2MarsEnv(gym.Env):
                 #print(STM_HCI)
 
                 delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
-
-                axes = np.dot(STM_HCI,delta_v_max_HCI)
+                delta_r_max = np.dot(STM_HCI,delta_v_max_HCI)
+                semiAxes = delta_r_max + np.transpose(r_centre)
+                self.extra_info['semiAxes'] = semiAxes
+                #print("Max position change: " + str(delta_r_max))
 
                 #ALTERNATE REACHABILTY FORMULATION 
                 # #Creates characteristic ellipsoid matrix and performs eigendecomposition
@@ -220,7 +222,7 @@ class Earth2MarsEnv(gym.Env):
                 #print("Action: " + str(action))
 
                 #Maps action to points within ellipse to find distance from centre of ellipse
-                offset_position = self.action2pos(axes, action)
+                offset_position = self.action2pos(delta_r_max, action)
                 #print("Position Offset: " + str(offset_position))
 
                 #Adds offset to centre position
@@ -313,14 +315,14 @@ class Earth2MarsEnv(gym.Env):
         return axes_sorted
 
     def action2pos(self, axes, action):
-        print("Action: " + str(action))
+        #print("Action: " + str(action))
         
         #Denormalising angles
         yaw = action[0] * np.pi                 # [-π to π]
         pitch = action[1] * ((np.pi) / 2)       # [-π/2 to π/2]
         r = action[2]                           # [-1 to 1]
 
-        print("Yaw, pitch, and r" + str([yaw, pitch, r]))
+        #print("Yaw, pitch, and r" + str([yaw, pitch, r]))
         
         # Spherical to Cartesian
         x = r * np.cos(pitch) * np.cos(yaw)

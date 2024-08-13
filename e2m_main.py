@@ -110,7 +110,7 @@ if __name__ == '__main__':
     fconv = mconv*aconv             # force, kN
     Isp = float(Isp)                # specific impulse of engine 
     v_ejection = 150
-    #v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658
+    #v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658 if Isp = 2000
     # ## INITIAL CONDITIONS ##
     # # planet models
     earth = jpl_lp('earth')
