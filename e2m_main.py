@@ -178,7 +178,7 @@ if __name__ == '__main__':
     }
 
     
-    # Function to get the next run number
+    # Function to get the next model number
     def get_next_run_number(base_dir):
         runs = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
         runs = sorted([int(d.split('_')[-1]) for d in runs if d.split('_')[-1].isdigit()])
@@ -242,8 +242,8 @@ if __name__ == '__main__':
         tensorboard_log=logdir #Logging disabled for debugging, to enable : logdir
     )
     
-    Interval = 2  # Checkpoint interval
-    total_timesteps = 2  # Total timesteps for the entire training
+    Interval = 100  # Checkpoint interval
+    total_timesteps = 200  # Total timesteps for the entire training
     iters = total_timesteps // Interval
 
     for i in range(iters):
@@ -255,5 +255,4 @@ if __name__ == '__main__':
     # plotRun(Run_log,r0,rT)
 
 
-        
     

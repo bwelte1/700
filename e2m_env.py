@@ -144,7 +144,11 @@ class Earth2MarsEnv(gym.Env):
         info = self.sol
         
         # Update the spacecraft state
-        #print("Mass used: " + str(self.m_current) + " to " + str(m_next))
+        print("Mass used: " + str(self.m_current) + " to " + str(m_next))
+        reward = self.getReward(m_next)
+        print("Reward: " + str(reward))
+
+
         self.r_current = r_next
         self.v_current = v_next
         self.m_current = m_next
@@ -156,14 +160,12 @@ class Earth2MarsEnv(gym.Env):
         
         self.training_steps += 1
         
-        reward = self.getReward(action)
-        
         truncated = False       # necessary return of step, if step is cut off early due to timeout etcc.
         return obs, reward, self.isDone, truncated, info
     
-    def getReward(self, action):
+    def getReward(self, mass_next):
         # minimize fuel consumption
-        reward = self.m_current - self.m0
+        reward = mass_next - self.m_current
         
         return reward
         
