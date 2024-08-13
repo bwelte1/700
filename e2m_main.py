@@ -130,7 +130,7 @@ if __name__ == '__main__':
     
     tof = int(tof)
 
-    print([r0, v0, rT, vT, m0])
+    #print([r0, v0, rT, vT, m0])
     # Can do lambert from earth to mars and get v1 and v2
     
     using_reachability = bool(int(using_reachability))
@@ -176,6 +176,38 @@ if __name__ == '__main__':
         'share_features_extractor': False
     }
 
+    models_dir = "saved_models/PPO"
+    log_base_dir = "logs/PPO"
+
+    # Ensure the base directories exist
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
+
+    if not os.path.exists(log_base_dir):
+        os.makedirs(log_base_dir)
+
+    # Function to get the next run number
+    def get_next_run_number(base_dir):
+        runs = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
+        runs = sorted([int(d.split('_')[-1]) for d in runs if d.split('_')[-1].isdigit()])
+        return runs[-1] + 1 if runs else 1
+
+    # Get the next run number for models and logs
+    next_run = get_next_run_number(models_dir)
+
+    # Set up the directories for the current run
+    models_dir = f"{models_dir}/Model_{next_run}"
+    logdir = f"{log_base_dir}/Model_{next_run}"
+
+    # Create directories for the current run if they don't exist
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
+
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
+
+    
+
     model = PPO(
         policy='MlpPolicy', 
         env=wrapped_env, 
@@ -202,16 +234,20 @@ if __name__ == '__main__':
         seed=None, 
         device='auto', 
         _init_setup_model=_init_setup_model,
-        tensorboard_log=None #Logging disabled for debugging, to enable : "./logs/"
+        tensorboard_log=logdir #Logging disabled for debugging, to enable : "./logs/"
     )
     
-    model.learn(total_timesteps=1) #300k Good
-    Run_log = wrapped_env.get_state_logs()
-    plotRun(Run_log,r0,rT)
+    Interval = 100000  # Checkpoint interval
+    total_timesteps = 300000  # Total timesteps for the entire training
+    iters = total_timesteps // Interval
+
+    for i in range(iters):
+        model.learn(total_timesteps=Interval, reset_num_timesteps=False, tb_log_name="Data")
+        model.save(f"{models_dir}/{Interval*(i+1)}")
+        print(f"Model saved at timestep {Interval*(i+1)}")
     
-    # output_folder_root = "./saved_models/"
-    # final_output_folder = output_folder_root + "final_model"
-    # model.save(path=final_output_folder)
+    # Run_log = wrapped_env.get_state_logs()
+    # plotRun(Run_log,r0,rT)
 
 
         
