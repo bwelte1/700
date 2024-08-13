@@ -109,8 +109,8 @@ if __name__ == '__main__':
     aconv = vconv/tconv             # acceleration, km/s^2
     fconv = mconv*aconv             # force, kN
     Isp = float(Isp)                # specific impulse of engine 
-    v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable
-
+    v_ejection = 150
+    #v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658
     # ## INITIAL CONDITIONS ##
     # # planet models
     earth = jpl_lp('earth')
@@ -177,37 +177,41 @@ if __name__ == '__main__':
         'share_features_extractor': False
     }
 
-    models_dir = "saved_models/PPO"
-    log_base_dir = "logs/PPO"
-
-    # Ensure the base directories exist
-    if not os.path.exists(models_dir):
-        os.makedirs(models_dir)
-
-    if not os.path.exists(log_base_dir):
-        os.makedirs(log_base_dir)
-
+    
     # Function to get the next run number
     def get_next_run_number(base_dir):
         runs = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
         runs = sorted([int(d.split('_')[-1]) for d in runs if d.split('_')[-1].isdigit()])
         return runs[-1] + 1 if runs else 1
 
-    # Get the next run number for models and logs
-    next_run = get_next_run_number(models_dir)
 
-    # Set up the directories for the current run
-    models_dir = f"{models_dir}/Model_{next_run}"
-    logdir = f"{log_base_dir}/Model_{next_run}"
+    def create_directories():
+        models_dir = "saved_models/PPO"
+        log_base_dir = "logs/PPO"
 
-    # Create directories for the current run if they don't exist
-    if not os.path.exists(models_dir):
-        os.makedirs(models_dir)
+        if not os.path.exists(models_dir):
+            os.makedirs(models_dir)
 
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
+        if not os.path.exists(log_base_dir):
+            os.makedirs(log_base_dir)
+        
+        next_run = get_next_run_number(models_dir)
 
-    
+        # Set up the directories for the current run
+        models_dir = f"{models_dir}/Model_{next_run}"
+        logdir = f"{log_base_dir}/Model_{next_run}"
+
+        # Create directories for the current run if they don't exist
+        if not os.path.exists(models_dir):
+            os.makedirs(models_dir)
+
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
+
+        return models_dir, logdir
+
+
+    models_dir, logdir = create_directories()
 
     model = PPO(
         policy='MlpPolicy', 
@@ -235,11 +239,11 @@ if __name__ == '__main__':
         seed=None, 
         device='auto', 
         _init_setup_model=_init_setup_model,
-        tensorboard_log=logdir #Logging disabled for debugging, to enable : "./logs/"
+        tensorboard_log=logdir #Logging disabled for debugging, to enable : logdir
     )
     
-    Interval = 100000  # Checkpoint interval
-    total_timesteps = 300000  # Total timesteps for the entire training
+    Interval = 2  # Checkpoint interval
+    total_timesteps = 2  # Total timesteps for the entire training
     iters = total_timesteps // Interval
 
     for i in range(iters):

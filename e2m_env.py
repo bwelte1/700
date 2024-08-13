@@ -144,9 +144,10 @@ class Earth2MarsEnv(gym.Env):
         info = self.sol
         
         # Update the spacecraft state
+        #print("Mass used: " + str(self.m_current) + " to " + str(m_next))
         self.r_current = r_next
         self.v_current = v_next
-        self.m_current -= m_next
+        self.m_current = m_next
         self.time_passed += self.TIME_STEP
         
         obs = array([self.r_current[0], self.r_current[1], self.r_current[2], \

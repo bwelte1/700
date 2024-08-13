@@ -103,7 +103,7 @@ if __name__ == '__main__':
         rT=rT, 
         m0=m0, 
         max_thrust=Tmax,
-        v_ejection=50, 
+        v_ejection=150,   #arbitrary
         mission_time=tof,
         using_reachability=using_reachability
     )
