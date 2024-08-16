@@ -207,12 +207,13 @@ class Earth2MarsEnv(gym.Env):
                 delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
                 delta_r_max = np.dot(STM_HCI,delta_v_max_HCI)
                 semiAxes = delta_r_max + np.transpose(r_centre)
-                self.extra_info['semiAxes'] = delta_r_max
+                #self.extra_info['semiAxes'] = delta_r_max
                 #print("Max position change: " + str(delta_r_max))
                 
                 Compare = True
                 if (Compare == True):
-                    without_reach(self = self, action = action,extra_info = self.extra_info)
+                    state_alt = self.without_reach(action)
+                    self.extra_info['state_alt'] = state_alt.copy()
 
 
 
@@ -240,7 +241,7 @@ class Earth2MarsEnv(gym.Env):
                 v_next = final_step_lambert.get_v2()[0]
                 #print(v_next)
                 dv = np.subtract(v_next,self.v_current)
-                #print("DeltaV: " + str(dv))
+                print("DeltaV: " + str(norm(dv)))
             else:
                 r_next = r_centre
                 v_next = v_centre
@@ -342,25 +343,28 @@ class Earth2MarsEnv(gym.Env):
         pos[np.abs(pos) < 1e-10] = 0
 
         return pos
+    
+    def without_reach(self, action):
+        yaw_alt = action[0] * np.pi                 # [-π to π]
+        pitch_alt = action[1] * ((np.pi) / 2)       # [-π/2 to π/2]
+        r_alt = action[2]                           # [-1 to 1]
+        
+        # Spherical to Cartesian
+        dvx_alt = r_alt * np.cos(pitch_alt) * np.cos(yaw_alt) * self.max_thrust
+        dvy_alt = r_alt * np.cos(pitch_alt) * np.sin(yaw_alt) * self.max_thrust
+        dvz_alt = r_alt * np.sin(pitch_alt) * self.max_thrust
+        v_delta_alt = [dvx_alt, dvy_alt, dvz_alt]
+        
+        v_current_alt = [a + b for a, b in zip(self.v_current, v_delta_alt)]
+        r_next_alt, v_next_alt = propagate_lagrangian(r0 = self.r_current, v0 = v_current_alt, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
+        v_diff
+        print("Alternate dv: " + str(norm(v_delta_alt)))
+        state_alt = np.concatenate((r_next_alt, v_next_alt))
+
+        return state_alt
 
     
-def without_reach(self, action, extra_info):
-    yaw_alt = action[0] * np.pi                 # [-π to π]
-    pitch_alt = action[1] * ((np.pi) / 2)       # [-π/2 to π/2]
-    r_alt = action[2]                           # [-1 to 1]
-    
-    # Spherical to Cartesian
-    dvx_alt = r_alt * np.cos(pitch_alt) * np.cos(yaw_alt) * self.max_thrust
-    dvy_alt = r_alt * np.cos(pitch_alt) * np.sin(yaw_alt) * self.max_thrust
-    dvz_alt = r_alt * np.sin(pitch_alt) * self.max_thrust
 
-    v_delta_alt = [dvx_alt, dvy_alt, dvz_alt]
-    v_current_alt = [a + b for a, b in zip(self.v_current, v_delta_alt)]
-    r_next_alt, v_next_alt = propagate_lagrangian(r0 = self.r_current, v0 = v_current_alt, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
-
-    state_alt = np.concatenate((r_next_alt, v_next_alt))
-
-    extra_info['state'] = state_alt
         
 
 

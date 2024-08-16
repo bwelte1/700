@@ -10,8 +10,7 @@ from e2m_env import Earth2MarsEnv
 import scipy.io
 import numpy as np
 
-def plot_run(state_logs, r0, rT):
-    positions = [state[:3] for state in state_logs]
+def plot_run(positions, r0, rT):
     positions.insert(0, [r0[0], r0[1], r0[2]])
     x_coords, y_coords, z_coords = zip(*positions)
 
@@ -41,7 +40,7 @@ class EnvLoggingWrapper(gym.Wrapper):
         observation, reward, done, truncated, info = self.env.step(action)
         self.info_logs.append(info)
         self.state_logs.append(observation)
-        self.extra_info_logs.append(self.env.extra_info)
+        self.extra_info_logs.append(self.env.extra_info.copy())
         return observation, reward, done, truncated, info
 
     def reset(self, **kwargs):
@@ -60,7 +59,7 @@ class EnvLoggingWrapper(gym.Wrapper):
         return self.extra_info_logs
     
 def upload_matlab(runlog, runlog_extra):
-    semiAxes_values = [info['semiAxes'] for info in runlog_extra if 'semiAxes' in info]
+    #semiAxes_values = [info['semiAxes'] for info in runlog_extra if 'semiAxes' in info]
     #print(f"semiAxes values for episode {episode + 1}: {semiAxes_values}")
 
     directory = 'matlab_exports'
@@ -99,7 +98,13 @@ def load_and_run_model(model_path, env, num_episodes, r0, rT):
         #upload_matlab(run_log,extra_info_logs)
 
         print(f"Episode {episode + 1} finished.")
-        plot_run(run_log, r0, rT)
+        positions = [state[:3] for state in run_log]
+        plot_run(positions, r0, rT)
+        positions_alt = [info['state_alt'] for info in extra_info_logs if 'state_alt' in info]
+        sun = np.concatenate((rT, vT))
+        positions_alt.append(sun)
+        plot_run(positions_alt, r0, rT)
+
 
 if __name__ == '__main__':
     import argparse
@@ -118,7 +123,7 @@ if __name__ == '__main__':
     v0 = (9.774596, -28.07828, 4.337725e-4)
     vT = (-16.427384, -14.860506, 9.21486e-2)
     m0 = 1000.0
-    Tmax = 0.05
+    Tmax = 0.5
     tof = 500
     using_reachability = True
 
