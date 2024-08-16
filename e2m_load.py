@@ -1,5 +1,5 @@
 # Example Run:
-# python e2m_load.py --model_dir saved_models/PPO/Model_2/300000 --episodes 1
+# python e2m_load.py --model_dir saved_models/PPO/Model_6/300000 --episodes 1
 
 import os
 import argparse
@@ -58,6 +58,23 @@ class EnvLoggingWrapper(gym.Wrapper):
     
     def get_extra_info_logs(self):
         return self.extra_info_logs
+    
+def upload_matlab(runlog, runlog_extra):
+    semiAxes_values = [info['semiAxes'] for info in runlog_extra if 'semiAxes' in info]
+    #print(f"semiAxes values for episode {episode + 1}: {semiAxes_values}")
+
+    directory = 'matlab_exports'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    # Convert logs to dictionaries
+    data = {
+        'extra_info_logs': np.array(runlog_extra),
+        'run_log': np.array(runlog)
+    }
+
+    # Save data to a MAT file in the specified directory
+    scipy.io.savemat(os.path.join(directory, 'data.mat'), data)
 
 def load_and_run_model(model_path, env, num_episodes, r0, rT):
     # Ensure the model file has a .zip extension
@@ -79,21 +96,7 @@ def load_and_run_model(model_path, env, num_episodes, r0, rT):
         extra_info_logs = wrapped_env.get_extra_info_logs()
         run_log = wrapped_env.get_state_logs()
 
-        semiAxes_values = [info['semiAxes'] for info in extra_info_logs if 'semiAxes' in info]
-        #print(f"semiAxes values for episode {episode + 1}: {semiAxes_values}")
-
-        directory = 'matlab_exports'
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        # Convert logs to dictionaries
-        data = {
-            'extra_info_logs': np.array(extra_info_logs),
-            'run_log': np.array(run_log)
-        }
-
-        # Save data to a MAT file in the specified directory
-        scipy.io.savemat(os.path.join(directory, 'data.mat'), data)
+        #upload_matlab(run_log,extra_info_logs)
 
         print(f"Episode {episode + 1} finished.")
         plot_run(run_log, r0, rT)

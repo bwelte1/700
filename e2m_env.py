@@ -207,8 +207,14 @@ class Earth2MarsEnv(gym.Env):
                 delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
                 delta_r_max = np.dot(STM_HCI,delta_v_max_HCI)
                 semiAxes = delta_r_max + np.transpose(r_centre)
-                self.extra_info['semiAxes'] = semiAxes
+                self.extra_info['semiAxes'] = delta_r_max
                 #print("Max position change: " + str(delta_r_max))
+                
+                Compare = True
+                if (Compare == True):
+                    without_reach(self = self, action = action,extra_info = self.extra_info)
+
+
 
                 #ALTERNATE REACHABILTY FORMULATION 
                 # #Creates characteristic ellipsoid matrix and performs eigendecomposition
@@ -338,30 +344,23 @@ class Earth2MarsEnv(gym.Env):
         return pos
 
     
-    # def updateSTM(self):
-    #     #This may need to be translated in some way
-    #     r_vec = self.r_current
-    #     v_vec = self.v_current
-    #     r = norm(r_vec)
-    #     h_vec = cross(r_vec,v_vec)
-    #     h = norm(h_vec)
-    #     e_vec = (cross(v_vec,h_vec))/(self.amu) - (r_vec/norm(r_vec))
-    #     e = norm(e_vec)
-    #     theta = arccos(dot(r_vec,e_vec)/(r*e))
-    #     vr = dot(v_vec,(r_vec/norm(r_vec)))
-    #     if (vr < 0):
-    #         theta = 2*np.pi - theta
+def without_reach(self, action, extra_info):
+    yaw_alt = action[0] * np.pi                 # [-π to π]
+    pitch_alt = action[1] * ((np.pi) / 2)       # [-π/2 to π/2]
+    r_alt = action[2]                           # [-1 to 1]
+    
+    # Spherical to Cartesian
+    dvx_alt = r_alt * np.cos(pitch_alt) * np.cos(yaw_alt) * self.max_thrust
+    dvy_alt = r_alt * np.cos(pitch_alt) * np.sin(yaw_alt) * self.max_thrust
+    dvz_alt = r_alt * np.sin(pitch_alt) * self.max_thrust
 
-    #     rho = 1 + e*np.cos(theta)
-    #     s = rho*np.cos(theta)
-    #     c = rho*np.cos(theta)
-    #     J = (h/rho**2)*(self.time_step)
-    #     STM_new = np.array([
-    #         [s*(1+1/rho), 0, J*3*(rho**2)],
-    #         [0, s/rho, 0],
-    #         [c, 0, (2 - 3*e*s*J)]
-    #     ])
-    #     return STM_new
+    v_delta_alt = [dvx_alt, dvy_alt, dvz_alt]
+    v_current_alt = [a + b for a, b in zip(self.v_current, v_delta_alt)]
+    r_next_alt, v_next_alt = propagate_lagrangian(r0 = self.r_current, v0 = v_current_alt, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
+
+    state_alt = np.concatenate((r_next_alt, v_next_alt))
+
+    extra_info['state'] = state_alt
         
 
 
