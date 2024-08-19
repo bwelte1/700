@@ -26,7 +26,7 @@ class Earth2MarsEnv(gym.Env):
     and final conditions
 
     Class inputs:
-        - NSTEPS:           Number of trajectory segments
+        - N_NODES:           Number of trajectory segments
         - amu:              Gravitational constant of central body
         - mission_time:     total mission time, s
         - v0:               initial velocity, km/s, list 
@@ -62,17 +62,17 @@ class Earth2MarsEnv(gym.Env):
         Start at state: (r0, v0, m0)
     
     Episode Termination:
-        - At time tf / after NSTEPS have been completed
+        - At time tf / after N_NODES have been completed
     """
     metadata = {'render.modes': ['human']}
     
     """ CLASS CONSTRUCTOR """
-    def __init__(self, NSTEPS, amu, mission_time, v0, r0, vT, rT, m0, max_thrust, v_ejection, using_reachability):
+    def __init__(self, N_NODES, amu, mission_time, v0, r0, vT, rT, m0, max_thrust, v_ejection, using_reachability):
         super(Earth2MarsEnv, self).__init__()
         # Initialize environment parameters
         self.v0 = array(v0)
         self.r0 = array(r0)
-        self.NSTEPS = NSTEPS
+        self.N_NODES = N_NODES
         self.amu = amu
         self.mission_time = mission_time
         self.vT = vT
@@ -85,7 +85,7 @@ class Earth2MarsEnv(gym.Env):
         self.isDone = False
         self.extra_info = {}
         # Timing
-        self.TIME_STEP = self.mission_time / self.NSTEPS
+        self.TIME_STEP = self.mission_time / self.N_NODES
         self.training_steps = 0
         
         """ ENVIRONMENT BOUNDARIES """
@@ -150,7 +150,7 @@ class Earth2MarsEnv(gym.Env):
         # print("Mass used: " + str(self.m_current) + " to " + str(m_next))
         reward = self.getReward(m_next)
         # print("Reward: " + str(reward))
-
+        #print("")
 
         self.r_current = r_next
         self.v_current = v_next
@@ -168,20 +168,18 @@ class Earth2MarsEnv(gym.Env):
         return obs, reward, self.isDone, truncated, info
     
     def getReward(self, mass_next):
-        # minimize fuel consumption
         reward = mass_next - self.m_current
-        
         return reward
         
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
         r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
         dv = 0
-        if (self.NSTEPS-1) > self.training_steps:
+        if (self.N_NODES-1) > self.training_steps:
             if self.using_reachability == True:   
                 state0 = np.concatenate((self.r_current, self.v_current))
                 statef = np.concatenate((r_centre, v_centre))
-
+                #print("Yaw: " + str(action[0]) + " Pitch: " + str(action[1]) + " Radius: " + str(action[2]))
 
                 delta_v_max_RTN = self.max_thrust*np.eye(3)
 
@@ -239,9 +237,12 @@ class Earth2MarsEnv(gym.Env):
                 #Finds velocity at next stage using lambert and produces dv
                 final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 v_next = final_step_lambert.get_v2()[0]
+
+                v_r1 = final_step_lambert.get_v1()[0]
                 #print(v_next)
-                dv = np.subtract(v_next,self.v_current)
-                print("DeltaV: " + str(norm(dv)))
+                dv = np.subtract(v_r1,self.v_current)
+                #print("Reachability DeltaV: " + str(dv))
+                #print("Reachability DeltaV Mag: " + str(norm(dv)))
             else:
                 r_next = r_centre
                 v_next = v_centre
@@ -299,6 +300,7 @@ class Earth2MarsEnv(gym.Env):
     
     def Tsiolkovsky(self, dv):
         m_next = self.m_current*exp(-norm(dv)/self.v_ejection)
+        #print("Mass update: " + str(m_next))
         return m_next
 
     def getEllipseAxes(self,eigenvalues,eigenvectors,STM):
@@ -357,8 +359,8 @@ class Earth2MarsEnv(gym.Env):
         
         v_current_alt = [a + b for a, b in zip(self.v_current, v_delta_alt)]
         r_next_alt, v_next_alt = propagate_lagrangian(r0 = self.r_current, v0 = v_current_alt, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
-        v_diff
-        print("Alternate dv: " + str(norm(v_delta_alt)))
+        #print("Classic DeltaV: " + str(v_delta_alt))
+        #print("Classic DeltaV Mag: " + str(norm(v_delta_alt)))
         state_alt = np.concatenate((r_next_alt, v_next_alt))
 
         return state_alt
@@ -369,7 +371,7 @@ class Earth2MarsEnv(gym.Env):
 
 
 # if __name__ == '__main__':
-#     env = Earth2MarsEnv(NSTEPS=10, amu=5, mission_time=500, v0 = array([0,0,0]), r0=array([0,0,0]), vT=[1,1,1], rT=[1,1,1], m0=1000, max_thrust=0.005)
+#     env = Earth2MarsEnv(N_NODES=10, amu=5, mission_time=500, v0 = array([0,0,0]), r0=array([0,0,0]), vT=[1,1,1], rT=[1,1,1], m0=1000, max_thrust=0.005)
 #     # If the environment don't follow the interface, an error will be thrown
 #     check_env(env, warn=True)
 

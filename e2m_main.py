@@ -80,13 +80,13 @@ if __name__ == '__main__':
     
     load_model = bool(int(load_model))
     Tmax = float(Tmax)
-    NSTEPS = int(NSTEPS)
+    N_NODES = int(N_NODES)
     num_cpu = int(num_cpu)
     init_learning_rate = float(init_learning_rate)
     init_clip_range = float(init_clip_range)
     ent_coef = float(ent_coef)
     nminibatches = int(nminibatches)
-    n_steps = int(NSTEPS*nminibatches)
+    n_steps = int(N_NODES*nminibatches*5)
     gamma = float(gamma)
     gae_lambda = float(gae_lambda)
     n_epochs = int(n_epochs)
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     aconv = vconv/tconv             # acceleration, km/s^2
     fconv = mconv*aconv             # force, kN
     Isp = float(Isp)                # specific impulse of engine 
-    v_ejection = 150
+    v_ejection = 100
     #v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658 if Isp = 2000
     # ## INITIAL CONDITIONS ##
     # # planet models
@@ -137,7 +137,7 @@ if __name__ == '__main__':
     using_reachability = bool(int(using_reachability))
     
     env = Earth2MarsEnv(
-        NSTEPS=NSTEPS, 
+        N_NODES=N_NODES, 
         amu=amu, 
         v0=v0, 
         r0=r0, 
@@ -242,8 +242,8 @@ if __name__ == '__main__':
         tensorboard_log=logdir#Logging disabled for debugging, to enable : logdir
     )
     
-    Interval = 100000  # Checkpoint interval
-    total_timesteps = 300000 # One timestep specifies one impulse
+    Interval = 250000  # Checkpoint interval
+    total_timesteps = 3000000 # One timestep specifies one impulse
     iters = total_timesteps // Interval
 
     print("Learning Commenced")

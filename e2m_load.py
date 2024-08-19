@@ -9,6 +9,7 @@ from stable_baselines3 import PPO
 from e2m_env import Earth2MarsEnv
 import scipy.io
 import numpy as np
+from numpy.linalg import norm
 
 def plot_run(positions, r0, rT):
     positions.insert(0, [r0[0], r0[1], r0[2]])
@@ -100,10 +101,10 @@ def load_and_run_model(model_path, env, num_episodes, r0, rT):
         print(f"Episode {episode + 1} finished.")
         positions = [state[:3] for state in run_log]
         plot_run(positions, r0, rT)
-        positions_alt = [info['state_alt'] for info in extra_info_logs if 'state_alt' in info]
-        sun = np.concatenate((rT, vT))
-        positions_alt.append(sun)
-        plot_run(positions_alt, r0, rT)
+        # positions_alt = [info['state_alt'] for info in extra_info_logs if 'state_alt' in info]
+        # sun = np.concatenate((rT, vT))
+        # positions_alt.append(sun)
+        # plot_run(positions_alt, r0, rT)
 
 
 if __name__ == '__main__':
@@ -128,7 +129,7 @@ if __name__ == '__main__':
     using_reachability = True
 
     env = Earth2MarsEnv(
-        NSTEPS=10, 
+        N_NODES=10, 
         amu=amu, 
         v0=v0, 
         r0=r0, 
@@ -136,7 +137,7 @@ if __name__ == '__main__':
         rT=rT, 
         m0=m0, 
         max_thrust=Tmax,
-        v_ejection=150,   #arbitrary
+        v_ejection=15,   #arbitrary
         mission_time=tof,
         using_reachability=using_reachability
     )
