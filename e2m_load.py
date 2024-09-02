@@ -117,31 +117,36 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, tof, amu, num_node
 
         #upload_matlab(run_log,extra_info_logs)
 
+        print(obs[:3])
         if num_episodes != 1:
             print(f"Episode {episode + 1} finished.")
-        positions = [state[:3] for state in run_log]
-        plot_run(positions, rI, rT)
+        # positions = [state[:3] for state in run_log]
+        # plot_run(positions, rI, rT)
         # positions_alt = [info['state_alt'] for info in extra_info_logs if 'state_alt' in info]
         # sun = np.concatenate((rT, vT))
         # positions_alt.append(sun)
         # plot_run(positions_alt, r0, rT)
         
-        # Finalize the plot
         ax.set_title("Combined Trajectory of All Episodes")
         ax.set_xlabel("x")
         ax.set_ylabel("y")
         ax.set_zlabel("z")
-        # Set axis limits to ensure all axes are on the same scale
-        ax.set_xlim([-1e8, 1e8])  # Set X-axis limit
-        ax.set_ylim([-1e8, 1e8])  # Set Y-axis limit
-        ax.set_zlim([-1e8, 1e8])  # Set Z-axis limit
+        ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100)  # Sun at origin
+        ax.scatter(rI[0], rI[1], rI[2], c='b', marker='o', s=50)  # Earth
+        ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Mars
+        # set axis limits to ensure all axes are on the same scale
+        axes_scale = 1.8e8
+        ax.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
+        ax.set_ylim([-axes_scale, axes_scale])  # Set Y-axis limit
+        ax.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
         ax.set_box_aspect([1,1,1])
         
         directory_path = os.path.dirname(args.model_dir)    # each interval zip file
         last_directory = os.path.basename(directory_path)   # model name
         interval_number = os.path.basename(model_path)   # model name
         plot_folder = os.path.join(os.getcwd(), 'Plots', last_directory)    # plot folder for model
-        plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')     
+        plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')  
+        plt.show()   
         fig1.savefig(plot_name_png)
         
 def display_plots():
@@ -192,5 +197,5 @@ if __name__ == '__main__':
         using_reachability=using_reachability
     )
 
-    # load_and_run_model(args.model_dir, env, args.episodes, r0, rT, tof, amu, num_nodes)
-    display_plots()
+    load_and_run_model(args.model_dir, env, args.episodes, r0, rT, tof, amu, num_nodes)
+    # display_plots()
