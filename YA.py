@@ -439,6 +439,14 @@ def rv2coe(state: np.ndarray,
     # Semi-latus rectum
     p = h_norm ** 2 / mu
 
+    # print("p: " + str(p))
+    # print("h: " + str(h))
+    # print("h_norm: " + str(h_norm))
+    # print("mu: " + str(mu))
+    
+
+
+
     # Semi-major axis
     a = 1 / (2 / r_norm - v_norm ** 2 / mu)
 
@@ -496,7 +504,6 @@ def YA_STM(state0: np.ndarray, tof: float, mu: float) -> np.ndarray:
     :param mu: Gravitational parameter of the central body [km^3/s^2] (or normalised)
     :return: YA STM
     """
-
     # Convert the state vector to the classical orbital elements
     # As the initial state is in [km, km/s], the output will be in [km, rad]
     a, e, i, RAAN, omega, TA0 = rv2coe(state0, mu)
@@ -570,9 +577,49 @@ def YA_STM(state0: np.ndarray, tof: float, mu: float) -> np.ndarray:
     ])
 
     # YA STM
+
     STM = inv_Ps_Transform @ trans_Matrix @ ps_Matrix @ ps_Transform
 
     # Eliminate values below the tolerance
     STM[np.abs(STM) < 1e-10] = 0.0
 
     return STM
+
+def DCM_LVLH2RTN() -> np.ndarray:
+    """
+    Function to compute the Direction Cosine Matrix (DCM) for LVLH to RTN conversion
+    :return: DCM for LVLH to RTN conversion [3x3]
+    """
+
+    DCM = np.array([
+        [0, 0, -1],
+        [1, 0, 0],
+        [0, -1, 0]
+    ])
+
+    return DCM
+
+def RotMat_RTN2Inertial(state: np.ndarray) -> np.ndarray:
+    """
+    Function to compute the rotation matrix for RTN to Inertial conversion
+    :param state: R-V state of the spacecraft [km, km/s]
+    :return: Rotation matrix for RTN to Inertial conversion
+    """
+
+    # Extract the position and velocity vectors
+    r = state[0:3]
+    v = state[3:6]
+    n = np.cross(r, v)
+
+    R = r / np.linalg.norm(r)
+    N = n / np.linalg.norm(n)
+    T = np.cross(N, R)
+
+    R_RTN2Inertial = np.array([
+        [R[0], T[0], N[0]],
+        [R[1], T[1], N[1]],
+        [R[2], T[2], N[2]]
+    ])
+
+    return R_RTN2Inertial
+

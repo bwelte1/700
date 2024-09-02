@@ -26,7 +26,7 @@ class Earth2MarsEnv(gym.Env):
     and final conditions
 
     Class inputs:
-        - NSTEPS:           Number of trajectory segments
+        - N_NODES:           Number of trajectory segments
         - amu:              Gravitational constant of central body
         - mission_time:     total mission time, s
         - v0:               initial velocity, km/s, list 
@@ -62,17 +62,17 @@ class Earth2MarsEnv(gym.Env):
         Start at state: (r0, v0, m0)
     
     Episode Termination:
-        - At time tf / after NSTEPS have been completed
+        - At time tf / after N_NODES have been completed
     """
     metadata = {'render.modes': ['human']}
     
     """ CLASS CONSTRUCTOR """
-    def __init__(self, NSTEPS, amu, mission_time, v0, r0, vT, rT, m0, max_thrust, v_ejection, using_reachability):
+    def __init__(self, N_NODES, amu, mission_time, v0, r0, vT, rT, m0, max_thrust, v_ejection, using_reachability):
         super(Earth2MarsEnv, self).__init__()
         # Initialize environment parameters
         self.v0 = array(v0)
         self.r0 = array(r0)
-        self.NSTEPS = NSTEPS
+        self.N_NODES = N_NODES
         self.amu = amu
         self.mission_time = mission_time
         self.vT = vT
@@ -83,9 +83,9 @@ class Earth2MarsEnv(gym.Env):
         self.using_reachability = using_reachability
         
         self.isDone = False
-                
+        self.extra_info = {}
         # Timing
-        self.TIME_STEP = self.mission_time / self.NSTEPS
+        self.TIME_STEP = self.mission_time / self.N_NODES
         self.training_steps = 0
         
         """ ENVIRONMENT BOUNDARIES """
@@ -110,13 +110,14 @@ class Earth2MarsEnv(gym.Env):
         
         self.observation_space = spaces.Box(o_lb, o_ub, dtype=np.float64)
         
-        """ ACTION SPACE """
+        """ ACTION SPACE [yaw, pitch, radius]"""
         # Lower bounds
-        a_lb = np.array([-180., -180., -1.])
+        a_lb = np.array([-1., -1., -1.])
         # Upper bounds
-        a_ub = np.array([180., 180., 1.])
+        a_ub = np.array([1., 1., 1.])
 
         self.action_space = spaces.Box(a_lb, a_ub, dtype=np.float64)
+
 
 
     def step(self, action):
@@ -125,6 +126,9 @@ class Earth2MarsEnv(gym.Env):
         # Compute reward based on new state
         # Return observation, reward, and done flag
         
+        #Clips action
+        action = np.clip(action, self.action_space.low, self.action_space.high)
+
         # Invalid action
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         
@@ -143,9 +147,14 @@ class Earth2MarsEnv(gym.Env):
         info = self.sol
         
         # Update the spacecraft state
+        # print("Mass used: " + str(self.m_current) + " to " + str(m_next))
+        reward = self.getReward(m_next)
+        # print("Reward: " + str(reward))
+        #print("")
+
         self.r_current = r_next
         self.v_current = v_next
-        self.m_current -= m_next
+        self.m_current = m_next
         self.time_passed += self.TIME_STEP
         
         obs = array([self.r_current[0], self.r_current[1], self.r_current[2], \
@@ -153,51 +162,87 @@ class Earth2MarsEnv(gym.Env):
                 self.m_current, self.time_passed]).astype(np.float64)
         
         self.training_steps += 1
-        
-        reward = self.getReward(action)
+        #print("Impulse Number : " + str(self.training_steps))
         
         truncated = False       # necessary return of step, if step is cut off early due to timeout etcc.
-        
         return obs, reward, self.isDone, truncated, info
     
-    def getReward(self, action):
-        # minimize fuel consumption
-        reward = self.m_current - self.m0
-        
+    def getReward(self, mass_next):
+        reward = mass_next - self.m_current
         return reward
         
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
         r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
         dv = 0
-        
-        if (self.NSTEPS-1) > self.training_steps:
+        if (self.N_NODES-1) > self.training_steps:
             if self.using_reachability == True:   
                 state0 = np.concatenate((self.r_current, self.v_current))
+                statef = np.concatenate((r_centre, v_centre))
+                #print("Yaw: " + str(action[0]) + " Pitch: " + str(action[1]) + " Radius: " + str(action[2]))
+
+                delta_v_max_RTN = self.max_thrust*np.eye(3)
 
                 #Gets current STM
                 STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
-
                 #Obtains useful STM Quadrant
                 STM_Current = STM_Current_Full[0:3, 3:6]
-                
-                #Creates characteristic ellipsoid matrix and performs eigendecomposition
-                M_Ellipsoid = np.matmul(np.transpose(STM_Current),STM_Current)
-                eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
+                #print("Useful untransformed STM: " + str(STM_Current))
 
-                #Gets body-centric ellipse axes
-                axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_Current)
+                #Obtains RTN State Transition Matrix
+                STM_RTN = np.dot(YA.DCM_LVLH2RTN(), STM_Current)
+
+                #Constructs Rotation Matrices
+                M_RTN2ECI_init = YA.RotMat_RTN2Inertial(state0)
+                M_RTN2ECI_init_T = np.transpose(YA.RotMat_RTN2Inertial(state0))
+                M_RTN2ECI_f = YA.RotMat_RTN2Inertial(statef)
+
+                #Obtains HCI Frame STM
+                STM_HCI = M_RTN2ECI_f @ STM_RTN @ M_RTN2ECI_init_T
+
+                #print(STM_HCI)
+
+                delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
+                delta_r_max = np.dot(STM_HCI,delta_v_max_HCI)
+                semiAxes = delta_r_max + np.transpose(r_centre)
+                #self.extra_info['semiAxes'] = delta_r_max
+                #print("Max position change: " + str(delta_r_max))
+                
+                Compare = True
+                if (Compare == True):
+                    state_alt = self.without_reach(action)
+                    self.extra_info['state_alt'] = state_alt.copy()
+
+
+
+                #ALTERNATE REACHABILTY FORMULATION 
+                # #Creates characteristic ellipsoid matrix and performs eigendecomposition
+                # M_Ellipsoid = np.matmul(np.transpose(STM_RTN),STM_RTN)
+                # eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
+
+                #HCI_eigvecs = M_RTN2ECI_f @ eigvecs
+
+                # #Gets body-centric ellipse axes
+                # axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_RTN)
+                #print("Action: " + str(action))
 
                 #Maps action to points within ellipse to find distance from centre of ellipse
-                offset_position = self.action2pos(self, axes, action)
-                
+                offset_position = self.action2pos(delta_r_max, action)
+                #print("Position Offset: " + str(offset_position))
+
                 #Adds offset to centre position
                 r_next = [a + b for a, b in zip(r_centre, offset_position)]
+                #print("Next Position: " + str(r_next))
 
                 #Finds velocity at next stage using lambert and produces dv
                 final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 v_next = final_step_lambert.get_v2()[0]
-                dv = v_next - self.v_current
+
+                v_r1 = final_step_lambert.get_v1()[0]
+                #print(v_next)
+                dv = np.subtract(v_r1,self.v_current)
+                #print("Reachability DeltaV: " + str(dv))
+                #print("Reachability DeltaV Mag: " + str(norm(dv)))
             else:
                 r_next = r_centre
                 v_next = v_centre
@@ -218,7 +263,6 @@ class Earth2MarsEnv(gym.Env):
             
             r_next = self.rT
             v_next = self.vT
-            print(m_next)
             
             self.isDone = True  
         
@@ -232,6 +276,7 @@ class Earth2MarsEnv(gym.Env):
         self.m_current = self.m0
         self.time_passed = 0.
         self.isDone = False
+        self.training_steps = 0
         
         # Reset parameters
         self.sol = {'rx': [], 'ry': [], 'rz': [],
@@ -255,6 +300,7 @@ class Earth2MarsEnv(gym.Env):
     
     def Tsiolkovsky(self, dv):
         m_next = self.m_current*exp(-norm(dv)/self.v_ejection)
+        #print("Mass update: " + str(m_next))
         return m_next
 
     def getEllipseAxes(self,eigenvalues,eigenvectors,STM):
@@ -278,10 +324,14 @@ class Earth2MarsEnv(gym.Env):
         return axes_sorted
 
     def action2pos(self, axes, action):
-        #Denormalising
+        #print("Action: " + str(action))
+        
+        #Denormalising angles
         yaw = action[0] * np.pi                 # [-π to π]
-        pitch = action[1] * (np.pi)             # [-π to π]
-        r = (action[2] + 1) / 2                 # [0 to 1]
+        pitch = action[1] * ((np.pi) / 2)       # [-π/2 to π/2]
+        r = action[2]                           # [-1 to 1]
+
+        #print("Yaw, pitch, and r" + str([yaw, pitch, r]))
         
         # Spherical to Cartesian
         x = r * np.cos(pitch) * np.cos(yaw)
@@ -295,37 +345,33 @@ class Earth2MarsEnv(gym.Env):
         pos[np.abs(pos) < 1e-10] = 0
 
         return pos
+    
+    def without_reach(self, action):
+        yaw_alt = action[0] * np.pi                 # [-π to π]
+        pitch_alt = action[1] * ((np.pi) / 2)       # [-π/2 to π/2]
+        r_alt = action[2]                           # [-1 to 1]
+        
+        # Spherical to Cartesian
+        dvx_alt = r_alt * np.cos(pitch_alt) * np.cos(yaw_alt) * self.max_thrust
+        dvy_alt = r_alt * np.cos(pitch_alt) * np.sin(yaw_alt) * self.max_thrust
+        dvz_alt = r_alt * np.sin(pitch_alt) * self.max_thrust
+        v_delta_alt = [dvx_alt, dvy_alt, dvz_alt]
+        
+        v_current_alt = [a + b for a, b in zip(self.v_current, v_delta_alt)]
+        r_next_alt, v_next_alt = propagate_lagrangian(r0 = self.r_current, v0 = v_current_alt, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
+        #print("Classic DeltaV: " + str(v_delta_alt))
+        #print("Classic DeltaV Mag: " + str(norm(v_delta_alt)))
+        state_alt = np.concatenate((r_next_alt, v_next_alt))
+
+        return state_alt
 
     
-    # def updateSTM(self):
-    #     #This may need to be translated in some way
-    #     r_vec = self.r_current
-    #     v_vec = self.v_current
-    #     r = norm(r_vec)
-    #     h_vec = cross(r_vec,v_vec)
-    #     h = norm(h_vec)
-    #     e_vec = (cross(v_vec,h_vec))/(self.amu) - (r_vec/norm(r_vec))
-    #     e = norm(e_vec)
-    #     theta = arccos(dot(r_vec,e_vec)/(r*e))
-    #     vr = dot(v_vec,(r_vec/norm(r_vec)))
-    #     if (vr < 0):
-    #         theta = 2*np.pi - theta
 
-    #     rho = 1 + e*np.cos(theta)
-    #     s = rho*np.cos(theta)
-    #     c = rho*np.cos(theta)
-    #     J = (h/rho**2)*(self.time_step)
-    #     STM_new = np.array([
-    #         [s*(1+1/rho), 0, J*3*(rho**2)],
-    #         [0, s/rho, 0],
-    #         [c, 0, (2 - 3*e*s*J)]
-    #     ])
-    #     return STM_new
         
 
 
 # if __name__ == '__main__':
-#     env = Earth2MarsEnv(NSTEPS=10, amu=5, mission_time=500, v0 = array([0,0,0]), r0=array([0,0,0]), vT=[1,1,1], rT=[1,1,1], m0=1000, max_thrust=0.005)
+#     env = Earth2MarsEnv(N_NODES=10, amu=5, mission_time=500, v0 = array([0,0,0]), r0=array([0,0,0]), vT=[1,1,1], rT=[1,1,1], m0=1000, max_thrust=0.005)
 #     # If the environment don't follow the interface, an error will be thrown
 #     check_env(env, warn=True)
 

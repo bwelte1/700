@@ -24,6 +24,28 @@ from pykep.core import epoch, lambert_problem
 from pykep import MU_SUN
 
 from e2m_env import Earth2MarsEnv
+from e2m_load import load_and_run_model
+
+def plotRun(state_logs,r0,rT):
+
+    positions = [state[:3] for state in state_logs]
+    positions.insert(0, [r0[0], r0[1], r0[2]])
+    x_coords, y_coords, z_coords = zip(*positions)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.plot(x_coords, y_coords, z_coords, c='k', marker='o')
+    ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100)  # Sun at origin
+    ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50)  # Earth
+    ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Mars
+
+    ax.set_xlabel('X Position (km)')
+    ax.set_ylabel('Y Position (km)')
+    ax.set_zlabel('Z Position (km)')
+    ax.set_title('Spacecraft Position Relative to the Sun')
+
+    plt.show()
     
 if __name__ == '__main__': 
     env_id = "700Project"
@@ -31,7 +53,7 @@ if __name__ == '__main__':
     subfolder = "Plots"
     if not os.path.exists(subfolder):
         os.makedirs(subfolder)
-    mpl_use('Agg')
+    mpl_use('Qt5Agg')
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     
@@ -59,13 +81,13 @@ if __name__ == '__main__':
     
     load_model = bool(int(load_model))
     Tmax = float(Tmax)
-    NSTEPS = int(NSTEPS)
+    N_NODES = int(N_NODES)
     num_cpu = int(num_cpu)
     init_learning_rate = float(init_learning_rate)
     init_clip_range = float(init_clip_range)
     ent_coef = float(ent_coef)
     nminibatches = int(nminibatches)
-    n_steps = int(NSTEPS*nminibatches)
+    n_steps = int(N_NODES*nminibatches*5)
     gamma = float(gamma)
     gae_lambda = float(gae_lambda)
     n_epochs = int(n_epochs)
@@ -80,17 +102,18 @@ if __name__ == '__main__':
     _init_setup_model = bool(int(_init_setup_model))
     
     # Physical constants
-    amu = MU_SUN                    # km^3/s^2, Gravitational constant of the central body
+    amu = MU_SUN / 1e9              # km^3/s^2, Gravitational constant of the central body
     rconv = 149600000.              # position, km
     vconv = np.sqrt(amu/rconv)      # velocity, km/s
     tconv = rconv/vconv             # time, s
     mconv = 1000.                   # mass, kg
     aconv = vconv/tconv             # acceleration, km/s^2
     fconv = mconv*aconv             # force, kN
-    v_ejection = 50               # propellant ejection velocity #TODO Change
-    
-    ## INITIAL CONDITIONS ##
-    # planet models
+    Isp = float(Isp)                # specific impulse of engine 
+    v_ejection = 100
+    #v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658 if Isp = 2000
+    # ## INITIAL CONDITIONS ##
+    # # planet models
     earth = jpl_lp('earth')
     mars = jpl_lp('mars')
     
@@ -99,17 +122,23 @@ if __name__ == '__main__':
     departure_date_e = epoch(start_date_julian)
     tof = int(tof)      # predetermined TOF
     arrival_date_e = epoch(tof+start_date_julian)
-    
-    # physical conditions
-    r0, v0 = earth.eph(departure_date_e)
-    rT, vT = mars.eph(arrival_date_e)
+
+    #Same init conds as Zavoli Federici Table 1 (km and km/s)
+    r0 = (-140699693.0, -51614428.0, 980.0)
+    v0 = (9.774596, -28.07828, 4.337725e-4)
+    rT = (172682023.0, 176959469.0, 7948912.0)
+    vT = (-16.427384, -14.860506, 9.21486e-2)
     m0 = float(m_initial)
+    
+    tof = int(tof)
+
+    #print([r0, v0, rT, vT, m0])
     # Can do lambert from earth to mars and get v1 and v2
     
     using_reachability = bool(int(using_reachability))
     
     env = Earth2MarsEnv(
-        NSTEPS=NSTEPS, 
+        N_NODES=N_NODES, 
         amu=amu, 
         v0=v0, 
         r0=r0, 
@@ -126,10 +155,12 @@ if __name__ == '__main__':
         def __init__(self, env):
             super(envLoggingWrapper, self).__init__(env)
             self.info_logs = []
+            self.state_logs = []
 
         def step(self, action):
             observation, reward, done, truncated, info = self.env.step(action)
             self.info_logs.append(info)
+            self.state_logs.append(observation)
             return observation, reward, done, truncated, info
 
         def reset(self, **kwargs):
@@ -137,12 +168,51 @@ if __name__ == '__main__':
 
         def get_info_logs(self):
             return self.info_logs
+        
+        def get_state_logs(self):
+            return self.state_logs
     
     wrapped_env = envLoggingWrapper(env)
         
     policy_kwargs = {
         'share_features_extractor': False
     }
+
+    
+    # Function to get the next model number
+    def get_next_run_number(base_dir):
+        runs = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
+        runs = sorted([int(d.split('_')[-1]) for d in runs if d.split('_')[-1].isdigit()])
+        return runs[-1] + 1 if runs else 1
+
+
+    def create_directories():
+        models_dir = "saved_models/PPO"
+        log_base_dir = "logs/PPO"
+
+        if not os.path.exists(models_dir):
+            os.makedirs(models_dir)
+
+        if not os.path.exists(log_base_dir):
+            os.makedirs(log_base_dir)
+        
+        next_run = get_next_run_number(models_dir)
+
+        # Set up the directories for the current run
+        models_dir = f"{models_dir}/Model_{next_run}"
+        logdir = f"{log_base_dir}/Model_{next_run}"
+
+        # Create directories for the current run if they don't exist
+        if not os.path.exists(models_dir):
+            os.makedirs(models_dir)
+
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
+
+        return models_dir, logdir
+
+
+    models_dir, logdir = create_directories()
 
     model = PPO(
         policy='MlpPolicy', 
@@ -170,12 +240,23 @@ if __name__ == '__main__':
         seed=None, 
         device='auto', 
         _init_setup_model=_init_setup_model,
-        tensorboard_log="./logs/"
+        tensorboard_log=logdir#Logging disabled for debugging, to enable : logdir
     )
     
-    model.learn(total_timesteps=300000)
+    Interval = 5000  # Checkpoint interval
+    total_timesteps = 3000000 # One timestep specifies one impulse
+    iters = total_timesteps // Interval
+
+    print("Learning Commenced")
+    for i in range(iters):
+        model.learn(total_timesteps=Interval, reset_num_timesteps=False, tb_log_name="Data")
+        model_path = f"{models_dir}/{Interval*(i+1)}"
+        model.save(model_path)
+        print(f"Model: {model_path}")
+        print(f"Model saved at timestep {Interval*(i+1)}")
     
-    output_folder_root = "./saved_models/"
-    final_output_folder = output_folder_root + "final_model"
-    model.save(path=final_output_folder)
+    # Run_log = wrapped_env.get_state_logs()
+    # plotRun(Run_log,r0,rT)
+
+
     
