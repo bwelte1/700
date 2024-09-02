@@ -24,6 +24,7 @@ from pykep.core import epoch, lambert_problem
 from pykep import MU_SUN
 
 from e2m_env import Earth2MarsEnv
+from e2m_load import load_and_run_model
 
 def plotRun(state_logs,r0,rT):
 
@@ -242,14 +243,16 @@ if __name__ == '__main__':
         tensorboard_log=logdir#Logging disabled for debugging, to enable : logdir
     )
     
-    Interval = 250000  # Checkpoint interval
+    Interval = 5000  # Checkpoint interval
     total_timesteps = 3000000 # One timestep specifies one impulse
     iters = total_timesteps // Interval
 
     print("Learning Commenced")
     for i in range(iters):
         model.learn(total_timesteps=Interval, reset_num_timesteps=False, tb_log_name="Data")
-        model.save(f"{models_dir}/{Interval*(i+1)}")
+        model_path = f"{models_dir}/{Interval*(i+1)}"
+        model.save(model_path)
+        print(f"Model: {model_path}")
         print(f"Model saved at timestep {Interval*(i+1)}")
     
     # Run_log = wrapped_env.get_state_logs()
