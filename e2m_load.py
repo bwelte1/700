@@ -13,7 +13,7 @@ from numpy.linalg import norm
 import shutil
 
 import pykep as pk
-from pykep import MU_SUN
+from pykep import MU_SUN, DAY2SEC
 from pykep.core import lambert_problem
 
 def plot_run(positions, r0, rT):
@@ -96,21 +96,45 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, tof, amu, num_node
         ax = fig1.add_subplot(111, projection='3d')  # Create 3D axes
         obs = wrapped_env.reset()
         done = False
-        iteration = 0
         while not done:
             r0 = obs[:3]
+            v0 = obs[3:6]
+            
             action, _states = model1.predict(obs)
             obs, reward, done, truncated, info = wrapped_env.step(action)
+            
             r1 = obs[:3]
-            l = lambert_problem(r0, r1, (tof/num_nodes), pk.MU_SUN)
-            v0 = l.get_v1()[0]
+            l = lambert_problem(r1=r0, r2=r1, tof=((tof/num_nodes)*DAY2SEC), mu=pk.MU_SUN)
+            v1 = l.get_v1()[0]
+            print(v0)
+            print(np.subtract(v1, v0))
+            print(obs[6])
             pk.orbit_plots.plot_lambert(l, axes=ax)
-            # pk.orbit_plots.plot_kepler(r0 = np.array(r0), v0 = np.array(v0), tof=(tof/num_nodes), mu=amu, axes=ax)
+            # pk.orbit_plots.plot_kepler(r0 = np.array(r0), v0 = np.array(v1), tof=(tof/num_nodes), mu=amu, axes=ax)
             
             # # Save the figure for each iteration
             # iteration += 1
             # fig1.savefig(f'./Plots/loadrunfig_iteration_{iteration}.png')
-            
+       
+        # TODO: DELTA V SANITY CHECK     
+        # r0 = obs[:3]
+        # v0 = obs[3:6]
+        
+        # action, _states = model1.predict(obs)
+        # obs, reward, done, truncated, info = wrapped_env.step(action)
+        # r1 = obs[:3]
+        # l_1 = lambert_problem(r1=r0, r2=r1, tof=((tof/num_nodes)*DAY2SEC), mu=pk.MU_SUN)
+        # v1 = l_1.get_v1()[0]
+        # v2 = l_1.get_v2()[0]
+        
+        # action, _states = model1.predict(obs)
+        # obs, reward, done, truncated, info = wrapped_env.step(action)
+        # r2 = obs[:3]
+        # l_2 = lambert_problem(r1=r1, r2=r2, tof=((tof/num_nodes)*DAY2SEC), mu=pk.MU_SUN)
+        # v2_prime = l_2.get_v1()[0]
+        
+        # print(np.subtract(v2_prime, v2))
+        # print(obs[6])
         
         extra_info_logs = wrapped_env.get_extra_info_logs()
         run_log = wrapped_env.get_state_logs()
