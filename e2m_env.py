@@ -239,7 +239,7 @@ class Earth2MarsEnv(gym.Env):
                 #Finds velocity at next stage using lambert and produces dv
                 final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 v_r1 = final_step_lambert.get_v1()[0]
-                v_next = final_step_lambert.get_v2()[0] # TODO: Issue could be here?
+                v_next = final_step_lambert.get_v2()[0]
                 #print(v_next)
                 dv = np.subtract(v_r1,self.v_current)
                 #print("Reachability DeltaV: " + str(dv))
