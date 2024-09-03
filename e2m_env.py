@@ -148,7 +148,7 @@ class Earth2MarsEnv(gym.Env):
         
         # Update the spacecraft state
         # print("Mass used: " + str(self.m_current) + " to " + str(m_next))
-        reward = self.getReward(m_next)
+        reward = self.getReward(m_next, dv)
         # print("Reward: " + str(reward))
         #print("")
 
@@ -167,8 +167,10 @@ class Earth2MarsEnv(gym.Env):
         truncated = False       # necessary return of step, if step is cut off early due to timeout etcc.
         return obs, reward, self.isDone, truncated, info
     
-    def getReward(self, mass_next):
+    def getReward(self, mass_next, dv):
         reward = mass_next - self.m_current
+        if np.linalg.norm(dv) > self.max_thrust:
+            reward = reward*1.1 - 100
         return reward
         
     def propagation_step(self, action):
@@ -236,9 +238,8 @@ class Earth2MarsEnv(gym.Env):
 
                 #Finds velocity at next stage using lambert and produces dv
                 final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
-                v_next = final_step_lambert.get_v2()[0]
-
                 v_r1 = final_step_lambert.get_v1()[0]
+                v_next = final_step_lambert.get_v2()[0] # TODO: Issue could be here?
                 #print(v_next)
                 dv = np.subtract(v_r1,self.v_current)
                 #print("Reachability DeltaV: " + str(dv))
@@ -253,12 +254,13 @@ class Earth2MarsEnv(gym.Env):
             # Step to mars (step N-1)
             final_step_lambert = lambert_problem(r1=self.r_current, r2=self.rT, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
             lambert_v1 = final_step_lambert.get_v1()[0]
-            dv_N_minus_1 = array(lambert_v1) - array(self.v_current)
+            dv_N_minus_1 = np.subtract(array(lambert_v1), array(self.v_current))
             m_next = self.Tsiolkovsky(array(dv_N_minus_1))
-
+            # TODO: Check if this dv is greater than max dv and lower the reward if so
+            
             # Equalization with mars (step N)
             lambert_v2 = final_step_lambert.get_v2()[0]
-            dv_equalization = array(self.vT) - array(lambert_v2) # velocity of mars - velocity at final step 
+            dv_equalization = np.subtract(array(self.vT), array(lambert_v2)) # velocity of mars - velocity at final step 
             m_next = self.Tsiolkovsky(array(dv_equalization))
             
             r_next = self.rT
