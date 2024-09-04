@@ -95,28 +95,42 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, tof, amu, num_node
         fig1 = plt.figure()
         ax = fig1.add_subplot(111, projection='3d')  # Create 3D axes
         obs = wrapped_env.reset()
+        r_prev = obs[:3]
+        v_prev = obs[3:6]
         done = False
         while not done:
-            r0 = obs[:3]
-            v0 = obs[3:6]
-            
+            print(f"Analysis of next arc")
+            # Plot Lambert
             action, _states = model1.predict(obs)
             obs, reward, done, truncated, info = wrapped_env.step(action)
-            
-            r1 = obs[:3]
-            l = lambert_problem(r1=r0, r2=r1, tof=((tof/num_nodes)*DAY2SEC), mu=pk.MU_SUN)
-            v1 = l.get_v1()[0]
-            print(v0)
-            print(np.subtract(v1, v0))
+            r_new = obs[:3]
+            print(f"v_prev: {v_prev}")
+            l = lambert_problem(r1=r_prev, r2=r_new, tof=((tof/num_nodes)*DAY2SEC/30000), mu=pk.MU_SUN, cw=False, max_revs=0) # TODO: When i divide tof by that number its circular
+            r_prev = r_new
+            v_new = l.get_v1()[0]
+            print(f"v_new: {v_new}")
+            v_prev = obs[3:6]
+            dv = np.subtract(v_new, v_prev)
+            print(dv)
             print(obs[6])
             pk.orbit_plots.plot_lambert(l, axes=ax)
-            # pk.orbit_plots.plot_kepler(r0 = np.array(r0), v0 = np.array(v1), tof=(tof/num_nodes), mu=amu, axes=ax)
+            
+            # # Plot Kepler
+            # v_current = obs[3:6]
+            # print(f"velocity at end of previous arc: {v_current}")
+            # action, _states = model1.predict(obs)
+            # obs, reward, done, truncated, info = wrapped_env.step(action)
+            # dv = obs[6:9]
+            # new_v = v_current + dv
+            # print(f"dv required to enter current arc from previous arc: {dv}")
+            # print(f"velocity at start of current arc: {new_v}")
+            # pk.orbit_plots.plot_kepler(r0 = np.array(obs[:3]), v0 = np.array(new_v), tof=(tof/num_nodes)*DAY2SEC, mu=amu, axes=ax)
             
             # # Save the figure for each iteration
             # iteration += 1
             # fig1.savefig(f'./Plots/loadrunfig_iteration_{iteration}.png')
        
-        # TODO: DELTA V SANITY CHECK     
+        # # TODO: DELTA V SANITY CHECK     
         # r0 = obs[:3]
         # v0 = obs[3:6]
         
@@ -124,7 +138,8 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, tof, amu, num_node
         # obs, reward, done, truncated, info = wrapped_env.step(action)
         # r1 = obs[:3]
         # l_1 = lambert_problem(r1=r0, r2=r1, tof=((tof/num_nodes)*DAY2SEC), mu=pk.MU_SUN)
-        # v1 = l_1.get_v1()[0]
+        # v0_prime = l_1.get_v1()[0]
+        # print(np.subtract(v0_prime, v0))
         # v2 = l_1.get_v2()[0]
         
         # action, _states = model1.predict(obs)
@@ -133,15 +148,16 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, tof, amu, num_node
         # l_2 = lambert_problem(r1=r1, r2=r2, tof=((tof/num_nodes)*DAY2SEC), mu=pk.MU_SUN)
         # v2_prime = l_2.get_v1()[0]
         
+        # # print(v2)
+        # # print(v2_prime)
         # print(np.subtract(v2_prime, v2))
-        # print(obs[6])
+        # # print(obs[6])
         
         extra_info_logs = wrapped_env.get_extra_info_logs()
         run_log = wrapped_env.get_state_logs()
 
         #upload_matlab(run_log,extra_info_logs)
 
-        print(obs[:3])
         if num_episodes != 1:
             print(f"Episode {episode + 1} finished.")
         # positions = [state[:3] for state in run_log]
@@ -159,7 +175,7 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, tof, amu, num_node
         ax.scatter(rI[0], rI[1], rI[2], c='b', marker='o', s=50)  # Earth
         ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Mars
         # set axis limits to ensure all axes are on the same scale
-        axes_scale = 1.8e8
+        axes_scale = 2e8
         ax.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
         ax.set_ylim([-axes_scale, axes_scale])  # Set Y-axis limit
         ax.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
