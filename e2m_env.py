@@ -47,6 +47,9 @@ class Earth2MarsEnv(gym.Env):
         5	vz                        -max_v   max_v
         6	m                           0       1
         7   t                           0       1
+        8   dvx
+        9   dvy
+        10  dvz
         
     Actions:
         Type: Box(3)
@@ -102,11 +105,11 @@ class Earth2MarsEnv(gym.Env):
         # Lower bounds
         o_lb = np.array([-self.max_r, -self.max_r, -self.max_r, \
             -self.max_v, -self.max_v, -self.max_v, \
-            0., 0.])
+            0., 0., -2*self.max_v, -2*self.max_v, -2*self.max_v])
         # Upper bounds
         o_ub = np.array([+self.max_r, +self.max_r, +self.max_r, \
             +self.max_v, +self.max_v, +self.max_v, \
-            1., 1.])
+            1., 1., -2*self.max_v, -2*self.max_v, -2*self.max_v])
         
         self.observation_space = spaces.Box(o_lb, o_ub, dtype=np.float64)
         
@@ -117,8 +120,6 @@ class Earth2MarsEnv(gym.Env):
         a_ub = np.array([1., 1., 1.])
 
         self.action_space = spaces.Box(a_lb, a_ub, dtype=np.float64)
-
-
 
     def step(self, action):
         # Simulate one time step in the environment
@@ -159,7 +160,7 @@ class Earth2MarsEnv(gym.Env):
         
         obs = array([self.r_current[0], self.r_current[1], self.r_current[2], \
                 self.v_current[0], self.v_current[1], self.v_current[2], \
-                self.m_current, self.time_passed]).astype(np.float64)
+                self.m_current, self.time_passed, dv[0], dv[1], dv[2]]).astype(np.float64)
         
         self.training_steps += 1
         #print("Impulse Number : " + str(self.training_steps))
@@ -176,7 +177,7 @@ class Earth2MarsEnv(gym.Env):
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
         r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
-        dv = 0
+        dv = [0, 0, 0]
         if (self.N_NODES-1) > self.training_steps:
             if self.using_reachability == True:   
                 state0 = np.concatenate((self.r_current, self.v_current))
@@ -214,8 +215,6 @@ class Earth2MarsEnv(gym.Env):
                 if (Compare == True):
                     state_alt = self.without_reach(action)
                     self.extra_info['state_alt'] = state_alt.copy()
-
-
 
                 #ALTERNATE REACHABILTY FORMULATION 
                 # #Creates characteristic ellipsoid matrix and performs eigendecomposition
@@ -279,6 +278,9 @@ class Earth2MarsEnv(gym.Env):
         self.time_passed = 0.
         self.isDone = False
         self.training_steps = 0
+        dvx = 0
+        dvy = 0
+        dvz = 0
         
         # Reset parameters
         self.sol = {'rx': [], 'ry': [], 'rz': [],
@@ -288,7 +290,7 @@ class Earth2MarsEnv(gym.Env):
         
         obs = array([self.r_current[0], self.r_current[1], self.r_current[2], \
                 self.v_current[0], self.v_current[1], self.v_current[2], \
-                self.m_current, self.time_passed]).astype(np.float64)
+                self.m_current, self.time_passed, dvx, dvy, dvz]).astype(np.float64)
         
         info = {}
         
