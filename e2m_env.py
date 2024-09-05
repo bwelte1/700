@@ -28,7 +28,7 @@ class Earth2MarsEnv(gym.Env):
     Class inputs:
         - N_NODES:           Number of trajectory segments
         - amu:              Gravitational constant of central body
-        - mission_time:     total mission time, s
+        - mission_time:     total mission time, years
         - v0:               initial velocity, km/s, list 
         - r0:               initial position, km, list
         - vT:               target velocity
@@ -47,9 +47,6 @@ class Earth2MarsEnv(gym.Env):
         5	vz                        -max_v   max_v
         6	m                           0       1
         7   t                           0       1
-        8   dvx
-        9   dvy
-        10  dvz
         
     Actions:
         Type: Box(3)
@@ -93,7 +90,7 @@ class Earth2MarsEnv(gym.Env):
         
         """ ENVIRONMENT BOUNDARIES """
         coe0 = ic2par(r = self.r0, v = self.v0, mu = self.amu)    # initial classical orbital element of the S/C
-        coeT = ic2par(r = self.rT, v = self.vT, mu = self.amu)  # classical orbital element of the target
+        coeT = ic2par(r = self.rT, v = self.vT, mu = self.amu)      # classical orbital element of the target
         rpT = coeT[0]*(1 - coeT[1])                               # periapsis radius of the target, km
         raT = coeT[0]*(1 + coeT[1])                               # apoapsis radius of the target, km
         vpT = sqrt(self.amu*(2./rpT - 1/coeT[0]))                 # periapsis velocity of the target, km/s
@@ -105,11 +102,11 @@ class Earth2MarsEnv(gym.Env):
         # Lower bounds
         o_lb = np.array([-self.max_r, -self.max_r, -self.max_r, \
             -self.max_v, -self.max_v, -self.max_v, \
-            0., 0., -2*self.max_v, -2*self.max_v, -2*self.max_v])
+            0., 0.])
         # Upper bounds
         o_ub = np.array([+self.max_r, +self.max_r, +self.max_r, \
             +self.max_v, +self.max_v, +self.max_v, \
-            1., 1., -2*self.max_v, -2*self.max_v, -2*self.max_v])
+            1., 1.])
         
         self.observation_space = spaces.Box(o_lb, o_ub, dtype=np.float64)
         
@@ -160,7 +157,7 @@ class Earth2MarsEnv(gym.Env):
         
         obs = array([self.r_current[0], self.r_current[1], self.r_current[2], \
                 self.v_current[0], self.v_current[1], self.v_current[2], \
-                self.m_current, self.time_passed, dv[0], dv[1], dv[2]]).astype(np.float64)
+                self.m_current, self.time_passed]).astype(np.float64)
         
         self.training_steps += 1
         #print("Impulse Number : " + str(self.training_steps))
@@ -290,7 +287,7 @@ class Earth2MarsEnv(gym.Env):
         
         obs = array([self.r_current[0], self.r_current[1], self.r_current[2], \
                 self.v_current[0], self.v_current[1], self.v_current[2], \
-                self.m_current, self.time_passed, dvx, dvy, dvz]).astype(np.float64)
+                self.m_current, self.time_passed]).astype(np.float64)
         
         info = {}
         

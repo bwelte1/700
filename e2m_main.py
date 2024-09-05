@@ -108,7 +108,7 @@ if __name__ == '__main__':
     vconv = np.sqrt(amu/rconv)      # velocity, km/s
     tconv = rconv/vconv             # time, s
     aconv = vconv/tconv             # acceleration, km/s^2
-    fconv = m0*aconv             # force, kN
+    fconv = m0*aconv                # force, kN
     Isp = float(Isp)                # specific impulse of engine 
     # v_ejection = 100
     v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658 if Isp = 2000

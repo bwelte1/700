@@ -122,7 +122,7 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, tof, amu, num_node
             # print(f"velocity at end of previous arc: {v_current}")
             # action, _states = model1.predict(obs)
             # obs, reward, done, truncated, info = wrapped_env.step(action)
-            # dv = obs[6:9]
+            # dv = obs[8:11] # dv now omitted from observation
             # new_v = v_current + dv
             # print(f"dv required to enter current arc from previous arc: {dv}")
             # print(f"velocity at start of current arc: {new_v}")
@@ -131,29 +131,6 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, tof, amu, num_node
             # # Save the figure for each iteration
             # iteration += 1
             # fig1.savefig(f'./Plots/loadrunfig_iteration_{iteration}.png')
-       
-        # # TODO: DELTA V SANITY CHECK     
-        # r0 = obs[:3]
-        # v0 = obs[3:6]
-        
-        # action, _states = model1.predict(obs)
-        # obs, reward, done, truncated, info = wrapped_env.step(action)
-        # r1 = obs[:3]
-        # l_1 = lambert_problem(r1=r0, r2=r1, tof=((tof/num_nodes)*DAY2SEC), mu=pk.MU_SUN)
-        # v0_prime = l_1.get_v1()[0]
-        # print(np.subtract(v0_prime, v0))
-        # v2 = l_1.get_v2()[0]
-        
-        # action, _states = model1.predict(obs)
-        # obs, reward, done, truncated, info = wrapped_env.step(action)
-        # r2 = obs[:3]
-        # l_2 = lambert_problem(r1=r1, r2=r2, tof=((tof/num_nodes)*DAY2SEC), mu=pk.MU_SUN)
-        # v2_prime = l_2.get_v1()[0]
-        
-        # # print(v2)
-        # # print(v2_prime)
-        # print(np.subtract(v2_prime, v2))
-        # # print(obs[6])
         
         extra_info_logs = wrapped_env.get_extra_info_logs()
         run_log = wrapped_env.get_state_logs()
