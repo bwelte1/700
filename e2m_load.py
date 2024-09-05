@@ -225,30 +225,10 @@ if __name__ == '__main__':
             
     input_file.close() #close file
     
-    load_model = bool(int(load_model))
     Tmax = float(Tmax)
     N_NODES = int(N_NODES)
-    num_cpu = int(num_cpu)
-    init_learning_rate = float(init_learning_rate)
-    init_clip_range = float(init_clip_range)
-    ent_coef = float(ent_coef)
-    nminibatches = int(nminibatches)
-    n_steps = int(N_NODES*nminibatches*5)
-    gamma = float(gamma)
-    gae_lambda = float(gae_lambda)
-    n_epochs = int(n_epochs)
-    batch_size = int(batch_size)
-    f_coef = float(f_coef)
-    max_grad_norm = float(max_grad_norm)
-    use_sde = bool(int(use_sde))
-    normalize_advantage = bool(int(normalize_advantage))
-    sde_sample_freq = int(sde_sample_freq)
-    stats_window_size = int(stats_window_size)
-    verbose = bool(int(verbose))
-    _init_setup_model = bool(int(_init_setup_model))
     m0 = float(m_initial)
     Isp = float(Isp)                # specific impulse of engine 
-    start_date_julian = int(start_date_julian)  # departure date from earth
     using_reachability = bool(int(using_reachability))
     tof = int(tof)      # predetermined TOF
     
@@ -256,7 +236,6 @@ if __name__ == '__main__':
     rconv = 149600000.              # position, km (sun-earth)
     vconv = np.sqrt(amu/rconv)      # velocity, km/s
     v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658 if Isp = 2000
-
 
     # Example initial conditions
     r0 = (-140699693.0, -51614428.0, 980.0)  # Earth position
