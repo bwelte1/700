@@ -1,5 +1,5 @@
 # Example Run:
-# python e2m_load.py --model_dir saved_models/PPO/Model_6/300000 --episodes 1
+# python e2m_load.py --settings settings_def.txt --model_dir saved_models/PPO/Model_10/2500000 --episodes 1
 
 import os
 import argparse
@@ -10,6 +10,8 @@ from e2m_env import Earth2MarsEnv
 import scipy.io
 import numpy as np
 from numpy.linalg import norm
+import pykep as pk
+from pykep import DAY2SEC
 
 def plot_run(positions, r0, rT):
     positions.insert(0, [r0[0], r0[1], r0[2]])
@@ -18,7 +20,7 @@ def plot_run(positions, r0, rT):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    ax.plot(x_coords, y_coords, z_coords, c='k', marker='o')
+    ax.plot(x_coords, y_coords, z_coords, c='b', marker='o')
     ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100)  # Sun at origin
     ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50)  # Earth
     ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Mars
@@ -98,9 +100,45 @@ def load_and_run_model(model_path, env, num_episodes, r0, rT):
 
         #upload_matlab(run_log,extra_info_logs)
 
+        plotting_data = [log['Plotting'] for log in extra_info_logs]
+
         print(f"Episode {episode + 1} finished.")
-        positions = [state[:3] for state in run_log]
-        plot_run(positions, r0, rT)
+        positions = [state[:3] for state in plotting_data]
+        velocities = [state[3:6] for state in plotting_data]
+
+        fig1 = plt.figure()
+        ax = fig1.add_subplot(111, projection='3d')
+
+        for ii in range(len(positions)):
+            #print(positions[ii])
+            pk.orbit_plots.plot_kepler(
+                r0=positions[ii],            # Initial position (3D)
+                v0=velocities[ii],           # Initial velocity (3D)
+                tof=(tof / N_NODES) * DAY2SEC, # Time of flight (seconds)
+                mu=amu,                      # Gravitational parameter
+                color='b',                   # Color of the orbit
+                label=None,                  # Optional label
+                axes=ax                      # 3D axis for plotting
+            )
+
+        x_coords, y_coords, z_coords = zip(*positions)
+        ax.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
+        ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100, label="Sun")  # Sun at origin
+        ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50, label="Earth")  # Earth
+        ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50, label="Mars")   # Mars
+
+        ax.set_xlabel('X Position (km)')
+        ax.set_ylabel('Y Position (km)')
+        ax.set_zlabel('Z Position (km)')
+        ax.set_title('Spacecraft Position Relative to the Sun')
+
+        ax.view_init(elev=90, azim=-90)
+        ax.legend()
+
+        # Show the plot
+        plt.show()
+        #plot_run(positions, r0, rT)
+
         # positions_alt = [info['state_alt'] for info in extra_info_logs if 'state_alt' in info]
         # sun = np.concatenate((rT, vT))
         # positions_alt.append(sun)
@@ -110,10 +148,30 @@ def load_and_run_model(model_path, env, num_episodes, r0, rT):
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description="Load and run a saved PPO model")
+    # Create one argument parser for all command-line arguments
+    parser = argparse.ArgumentParser(description="Load settings and run a saved PPO model")
+    
+    # Add arguments for settings, model directory, and number of episodes
+    parser.add_argument('--settings', type=str, default="settings_def.txt", \
+        help='Input settings file')
     parser.add_argument('--model_dir', type=str, required=True, help="Path to the saved model directory")
     parser.add_argument('--episodes', type=int, default=1, help="Number of episodes to run")
+
+    # Parse the arguments
     args = parser.parse_args()
+
+    # Read the settings file
+    settings_file = "./settings_files/" + args.settings
+    with open(settings_file, "r") as input_file:
+        input_file_all = input_file.readlines()
+        for line in input_file_all:
+            line = line.split()
+            if (len(line) > 2):
+                globals()[line[0]] = line[1:]
+            else:
+                globals()[line[0]] = line[1]
+    
+    input_file.close()
 
     # Example initial conditions
     r0 = (-140699693.0, -51614428.0, 980.0)  # Earth position
@@ -123,13 +181,13 @@ if __name__ == '__main__':
     amu = 132712440018.0  # km^3/s^2, Gravitational constant of the central body
     v0 = (9.774596, -28.07828, 4.337725e-4)
     vT = (-16.427384, -14.860506, 9.21486e-2)
-    m0 = 1000.0
-    Tmax = 0.5
-    tof = 500
-    using_reachability = True
+    m0 = float(m_initial)
+    Tmax = float(Tmax)
+    N_NODES = int(N_NODES)
+    tof = int(tof)
 
     env = Earth2MarsEnv(
-        N_NODES=10, 
+        N_NODES=N_NODES, 
         amu=amu, 
         v0=v0, 
         r0=r0, 
@@ -137,7 +195,7 @@ if __name__ == '__main__':
         rT=rT, 
         m0=m0, 
         max_thrust=Tmax,
-        v_ejection=15,   #arbitrary
+        v_ejection=35,   #arbitrary
         mission_time=tof,
         using_reachability=using_reachability
     )

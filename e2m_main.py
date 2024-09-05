@@ -243,7 +243,7 @@ if __name__ == '__main__':
     )
     
     Interval = 250000  # Checkpoint interval
-    total_timesteps = 3000000 # One timestep specifies one impulse
+    total_timesteps = 10000000 # One timestep specifies one impulse
     iters = total_timesteps // Interval
 
     print("Learning Commenced")

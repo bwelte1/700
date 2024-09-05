@@ -176,7 +176,7 @@ class Earth2MarsEnv(gym.Env):
         r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
         dv = 0
         if (self.N_NODES-1) > self.training_steps:
-            if self.using_reachability == True:   
+            if (self.using_reachability == 1):   
                 state0 = np.concatenate((self.r_current, self.v_current))
                 statef = np.concatenate((r_centre, v_centre))
                 #print("Yaw: " + str(action[0]) + " Pitch: " + str(action[1]) + " Radius: " + str(action[2]))
@@ -207,11 +207,6 @@ class Earth2MarsEnv(gym.Env):
                 semiAxes = delta_r_max + np.transpose(r_centre)
                 #self.extra_info['semiAxes'] = delta_r_max
                 #print("Max position change: " + str(delta_r_max))
-                
-                Compare = True
-                if (Compare == True):
-                    state_alt = self.without_reach(action)
-                    self.extra_info['state_alt'] = state_alt.copy()
 
 
 
@@ -241,11 +236,16 @@ class Earth2MarsEnv(gym.Env):
                 v_r1 = final_step_lambert.get_v1()[0]
                 #print(v_next)
                 dv = np.subtract(v_r1,self.v_current)
+                self.plotting = np.concatenate((self.r_current, v_r1))
+                self.extra_info['Plotting'] = self.plotting.copy()
                 #print("Reachability DeltaV: " + str(dv))
                 #print("Reachability DeltaV Mag: " + str(norm(dv)))
+                # print("Reach")
             else:
-                r_next = r_centre
-                v_next = v_centre
+                state_alt, dv = self.without_reach(action)
+                r_next = state_alt[:3]
+                v_next = state_alt[3:6]
+                # print("No Reach")
                 
             m_next = self.Tsiolkovsky(array(dv))
         
@@ -255,6 +255,9 @@ class Earth2MarsEnv(gym.Env):
             lambert_v1 = final_step_lambert.get_v1()[0]
             dv_N_minus_1 = array(lambert_v1) - array(self.v_current)
             m_next = self.Tsiolkovsky(array(dv_N_minus_1))
+            
+            self.plotting = np.concatenate((self.r_current, lambert_v1))
+            self.extra_info['Plotting'] = self.plotting.copy()
 
             # Equalization with mars (step N)
             lambert_v2 = final_step_lambert.get_v2()[0]
@@ -362,8 +365,9 @@ class Earth2MarsEnv(gym.Env):
         #print("Classic DeltaV: " + str(v_delta_alt))
         #print("Classic DeltaV Mag: " + str(norm(v_delta_alt)))
         state_alt = np.concatenate((r_next_alt, v_next_alt))
-
-        return state_alt
+        self.plotting = np.concatenate((self.r_current, v_current_alt))
+        self.extra_info['Plotting'] = self.plotting.copy()
+        return state_alt, v_delta_alt
 
     
 
