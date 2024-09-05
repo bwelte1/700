@@ -105,17 +105,19 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, tof, amu, num_node
             obs, reward, done, truncated, info = wrapped_env.step(action)
             r_new = obs[:3]
             print(f"v_prev: {v_prev}")
-            l = lambert_problem(r1=r_prev, r2=r_new, tof=((tof/num_nodes)*DAY2SEC/30000), mu=pk.MU_SUN, cw=False, max_revs=0) # TODO: When i divide tof by that number its circular
+            l = lambert_problem(r1=r_prev, r2=r_new, tof=((tof/num_nodes)*DAY2SEC), mu=amu, max_revs=0) 
             r_prev = r_new
             v_new = l.get_v1()[0]
             print(f"v_new: {v_new}")
-            v_prev = obs[3:6]
             dv = np.subtract(v_new, v_prev)
-            print(dv)
+            print(f"dv: {dv}")
+            print(f"norm: {norm(dv)}")
             print(obs[6])
+            v_prev = obs[3:6]
             pk.orbit_plots.plot_lambert(l, axes=ax)
+            ax.scatter(r_new[0], r_new[1], r_new[2], c='k', marker='o', s=10) 
             
-            # # Plot Kepler
+            # Plot Kepler
             # v_current = obs[3:6]
             # print(f"velocity at end of previous arc: {v_current}")
             # action, _states = model1.predict(obs)
@@ -207,24 +209,65 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Load and run a saved PPO model")
     parser.add_argument('--model_dir', type=str, required=True, help="Path to the saved model directory")
     parser.add_argument('--episodes', type=int, default=1, help="Number of episodes to run")
+    parser.add_argument('--settings', type=str, default="settings_def.txt", help='Input settings file')
     args = parser.parse_args()
+    settings_file = "./settings_files/" + args.settings
+    
+    #Read settings and assign environment and model parameters
+    with open(settings_file, "r") as input_file: # with open context
+        input_file_all = input_file.readlines()
+        for line in input_file_all: #read line
+            line = line.split()
+            if (len(line) > 2):
+                globals()[line[0]] = line[1:]
+            else:
+                globals()[line[0]] = line[1]
+            
+    input_file.close() #close file
+    
+    load_model = bool(int(load_model))
+    Tmax = float(Tmax)
+    N_NODES = int(N_NODES)
+    num_cpu = int(num_cpu)
+    init_learning_rate = float(init_learning_rate)
+    init_clip_range = float(init_clip_range)
+    ent_coef = float(ent_coef)
+    nminibatches = int(nminibatches)
+    n_steps = int(N_NODES*nminibatches*5)
+    gamma = float(gamma)
+    gae_lambda = float(gae_lambda)
+    n_epochs = int(n_epochs)
+    batch_size = int(batch_size)
+    f_coef = float(f_coef)
+    max_grad_norm = float(max_grad_norm)
+    use_sde = bool(int(use_sde))
+    normalize_advantage = bool(int(normalize_advantage))
+    sde_sample_freq = int(sde_sample_freq)
+    stats_window_size = int(stats_window_size)
+    verbose = bool(int(verbose))
+    _init_setup_model = bool(int(_init_setup_model))
+    m0 = float(m_initial)
+    Isp = float(Isp)                # specific impulse of engine 
+    start_date_julian = int(start_date_julian)  # departure date from earth
+    using_reachability = bool(int(using_reachability))
+    tof = int(tof)      # predetermined TOF
+    
+    amu = MU_SUN / 1e9              # km^3/s^2, Gravitational constant of the central body
+    rconv = 149600000.              # position, km (sun-earth)
+    vconv = np.sqrt(amu/rconv)      # velocity, km/s
+    v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658 if Isp = 2000
+
 
     # Example initial conditions
     r0 = (-140699693.0, -51614428.0, 980.0)  # Earth position
     rT = (172682023.0, 176959469.0, 7948912.0)  # Mars position
 
     # Physical constants
-    amu = 132712440018.0  # km^3/s^2, Gravitational constant of the central body
     v0 = (9.774596, -28.07828, 4.337725e-4)
     vT = (-16.427384, -14.860506, 9.21486e-2)
-    m0 = 1000.0
-    Tmax = 0.5
-    tof = 500
-    using_reachability = True
-    num_nodes = 10
 
     env = Earth2MarsEnv(
-        N_NODES=num_nodes, 
+        N_NODES=N_NODES, 
         amu=amu, 
         v0=v0, 
         r0=r0, 
@@ -232,10 +275,10 @@ if __name__ == '__main__':
         rT=rT, 
         m0=m0, 
         max_thrust=Tmax,
-        v_ejection=15,   #arbitrary
+        v_ejection=v_ejection,   #arbitrary
         mission_time=tof,
         using_reachability=using_reachability
     )
 
-    load_and_run_model(args.model_dir, env, args.episodes, r0, rT, tof, amu, num_nodes)
+    load_and_run_model(args.model_dir, env, args.episodes, r0, rT, tof, amu, num_nodes=N_NODES)
     # display_plots()
