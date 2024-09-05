@@ -78,6 +78,41 @@ def upload_matlab(runlog, runlog_extra):
     # Save data to a MAT file in the specified directory
     scipy.io.savemat(os.path.join(directory, 'data.mat'), data)
 
+def plot_traj_kepler(plot_data):
+    positions = [state[:3] for state in plot_data]
+    velocities = [state[3:6] for state in plot_data]
+
+    fig1 = plt.figure()
+    ax = fig1.add_subplot(111, projection='3d')
+
+    for ii in range(len(positions)):
+        #print(positions[ii])
+        pk.orbit_plots.plot_kepler(
+            r0=positions[ii],            # Initial position (3D)
+            v0=velocities[ii],           # Initial velocity (3D)
+            tof=(tof / N_NODES) * DAY2SEC, # Time of flight (seconds)
+            mu=amu,                      # Gravitational parameter
+            color='b',                   # Color of the orbit
+            label=None,                  # Optional label
+            axes=ax                      # 3D axis for plotting
+        )
+
+    x_coords, y_coords, z_coords = zip(*positions)
+    ax.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
+    ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100, label="Sun")  # Sun at origin
+    ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50, label="Earth")  # Earth
+    ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50, label="Mars")   # Mars
+
+    ax.set_xlabel('X Position (km)')
+    ax.set_ylabel('Y Position (km)')
+    ax.set_zlabel('Z Position (km)')
+    ax.set_title('Spacecraft Position Relative to the Sun')
+
+    ax.view_init(elev=90, azim=-90)
+    ax.legend()
+
+    plt.show()
+
 def load_and_run_model(model_path, env, num_episodes, r0, rT):
     # Ensure the model file has a .zip extension
     model_file_path = f"{model_path}.zip" if not model_path.endswith(".zip") else model_path
@@ -101,42 +136,11 @@ def load_and_run_model(model_path, env, num_episodes, r0, rT):
         #upload_matlab(run_log,extra_info_logs)
 
         plotting_data = [log['Plotting'] for log in extra_info_logs]
+        plot_traj_kepler(plotting_data)
+
 
         print(f"Episode {episode + 1} finished.")
-        positions = [state[:3] for state in plotting_data]
-        velocities = [state[3:6] for state in plotting_data]
-
-        fig1 = plt.figure()
-        ax = fig1.add_subplot(111, projection='3d')
-
-        for ii in range(len(positions)):
-            #print(positions[ii])
-            pk.orbit_plots.plot_kepler(
-                r0=positions[ii],            # Initial position (3D)
-                v0=velocities[ii],           # Initial velocity (3D)
-                tof=(tof / N_NODES) * DAY2SEC, # Time of flight (seconds)
-                mu=amu,                      # Gravitational parameter
-                color='b',                   # Color of the orbit
-                label=None,                  # Optional label
-                axes=ax                      # 3D axis for plotting
-            )
-
-        x_coords, y_coords, z_coords = zip(*positions)
-        ax.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
-        ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100, label="Sun")  # Sun at origin
-        ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50, label="Earth")  # Earth
-        ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50, label="Mars")   # Mars
-
-        ax.set_xlabel('X Position (km)')
-        ax.set_ylabel('Y Position (km)')
-        ax.set_zlabel('Z Position (km)')
-        ax.set_title('Spacecraft Position Relative to the Sun')
-
-        ax.view_init(elev=90, azim=-90)
-        ax.legend()
-
-        # Show the plot
-        plt.show()
+        
         #plot_run(positions, r0, rT)
 
         # positions_alt = [info['state_alt'] for info in extra_info_logs if 'state_alt' in info]
