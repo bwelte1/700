@@ -106,7 +106,7 @@ class Earth2MarsEnv(gym.Env):
         # Upper bounds
         o_ub = np.array([+self.max_r, +self.max_r, +self.max_r, \
             +self.max_v, +self.max_v, +self.max_v, \
-            1., 1.])
+            m0, mission_time*DAY2SEC])
         
         self.observation_space = spaces.Box(o_lb, o_ub, dtype=np.float64)
         
