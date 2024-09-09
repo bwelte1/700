@@ -148,12 +148,18 @@ class Earth2MarsEnv(gym.Env):
         
         # Update the spacecraft state
         # print("Mass used: " + str(self.m_current) + " to " + str(m_next))
-        reward = self.getReward(m_next)
         # print("Reward: " + str(reward))
         #print("")
 
+        
+
         self.r_current = r_next
         self.v_current = v_next
+        
+        # print("DV: " + str(dv))
+        # print("Norm DV: " + str(norm(dv)))
+        reward = self.getReward(m_next, action, dv)
+
         self.m_current = m_next
         self.time_passed += self.TIME_STEP
         
@@ -167,9 +173,23 @@ class Earth2MarsEnv(gym.Env):
         truncated = False       # necessary return of step, if step is cut off early due to timeout etcc.
         return obs, reward, self.isDone, truncated, info
     
-    def getReward(self, mass_next):
+    def getReward(self, mass_next, action, dv):
         reward = mass_next - self.m_current
+
+        for ii in range(len(action)):
+            reward -= 100*max(0, abs(action[ii]) - 1)
+
+        reward -= 0.05*((max(0, norm(dv) - self.max_thrust)) ** 2)
+
         return reward
+    
+        # if (norm(self.r_current) < norm(self.r0)):
+        #     radial_decrease = norm(self.r0) - norm(self.r_current)
+        #     penalty = (radial_decrease / 3e5) + 25
+        #     reward -= penalty
+        
+        # print(reward)
+        
         
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
@@ -254,8 +274,8 @@ class Earth2MarsEnv(gym.Env):
             final_step_lambert = lambert_problem(r1=self.r_current, r2=self.rT, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
             lambert_v1 = final_step_lambert.get_v1()[0]
             dv_N_minus_1 = array(lambert_v1) - array(self.v_current)
-            m_next = self.Tsiolkovsky(array(dv_N_minus_1))
-            
+            carry_m = self.m_current
+            self.m_current = self.Tsiolkovsky(array(dv_N_minus_1))
             self.plotting = np.concatenate((self.r_current, lambert_v1))
             self.extra_info['Plotting'] = self.plotting.copy()
 
@@ -263,11 +283,16 @@ class Earth2MarsEnv(gym.Env):
             lambert_v2 = final_step_lambert.get_v2()[0]
             dv_equalization = array(self.vT) - array(lambert_v2) # velocity of mars - velocity at final step 
             m_next = self.Tsiolkovsky(array(dv_equalization))
+
+            self.m_current = carry_m
             
             r_next = self.rT
             v_next = self.vT
             
             self.isDone = True  
+
+            #Scalar Dv still works for Tsiolkovsky
+            dv = norm(dv_N_minus_1) + norm(dv_equalization)
         
         return r_next, v_next, m_next, dv
     
@@ -303,7 +328,7 @@ class Earth2MarsEnv(gym.Env):
     
     def Tsiolkovsky(self, dv):
         m_next = self.m_current*exp(-norm(dv)/self.v_ejection)
-        #print("Mass update: " + str(m_next))
+        # print("Mass from: " + str(self.m_current) + " to " + str(m_next))
         return m_next
 
     def getEllipseAxes(self,eigenvalues,eigenvectors,STM):

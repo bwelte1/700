@@ -133,20 +133,12 @@ def load_and_run_model(model_path, env, num_episodes, r0, rT):
         extra_info_logs = wrapped_env.get_extra_info_logs()
         run_log = wrapped_env.get_state_logs()
 
-        #upload_matlab(run_log,extra_info_logs)
-
         plotting_data = [log['Plotting'] for log in extra_info_logs]
         plot_traj_kepler(plotting_data)
 
 
         print(f"Episode {episode + 1} finished.")
-        
-        #plot_run(positions, r0, rT)
 
-        # positions_alt = [info['state_alt'] for info in extra_info_logs if 'state_alt' in info]
-        # sun = np.concatenate((rT, vT))
-        # positions_alt.append(sun)
-        # plot_run(positions_alt, r0, rT)
 
 
 if __name__ == '__main__':
@@ -179,7 +171,7 @@ if __name__ == '__main__':
 
     # Example initial conditions
     r0 = (-140699693.0, -51614428.0, 980.0)  # Earth position
-    rT = (172682023.0, 176959469.0, 7948912.0)  # Mars position
+    rT = (-172682023.0, 176959469.0, 7948912.0)  # Mars position
 
     # Physical constants
     amu = 132712440018.0  # km^3/s^2, Gravitational constant of the central body
@@ -199,7 +191,7 @@ if __name__ == '__main__':
         rT=rT, 
         m0=m0, 
         max_thrust=Tmax,
-        v_ejection=35,   #arbitrary
+        v_ejection=100,   #arbitrary
         mission_time=tof,
         using_reachability=using_reachability
     )
