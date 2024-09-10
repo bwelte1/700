@@ -140,7 +140,7 @@ def load_and_run_model(model_path, env, num_episodes, r0, rT):
             obs, reward, done, truncated, info = wrapped_env.step(action)
             r_new = obs[:3]
             print(f"v_prev: {v_prev}")
-            l = lambert_problem(r1=r_prev, r2=r_new, tof=((tof/num_nodes)*DAY2SEC), mu=amu, max_revs=0) 
+            l = lambert_problem(r1=r_prev, r2=r_new, tof=((tof/N_NODES)*DAY2SEC), mu=amu, max_revs=0) 
             r_prev = r_new
             v_new = l.get_v1()[0]
             print(f"v_new: {v_new}")
