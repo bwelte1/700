@@ -220,14 +220,11 @@ class Earth2MarsEnv(gym.Env):
 
                 delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
                 delta_r_max = np.dot(STM_HCI,delta_v_max_HCI)
-                semiAxes = delta_r_max + np.transpose(r_centre)
-                #self.extra_info['semiAxes'] = delta_r_max
+                semiAxes_pos = np.transpose(r_centre) + delta_r_max 
+                semiAxes_neg = np.transpose(r_centre) - delta_r_max 
+                semiAxes = np.concatenate([semiAxes_pos, semiAxes_neg])
+                self.extra_info['semiAxes'] = semiAxes
                 #print("Max position change: " + str(delta_r_max))
-                
-                Compare = True
-                if (Compare == True):
-                    state_alt = self.without_reach(action)
-                    self.extra_info['state_alt'] = state_alt.copy()
 
                 #ALTERNATE REACHABILTY FORMULATION 
                 # #Creates characteristic ellipsoid matrix and performs eigendecomposition
