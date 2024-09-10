@@ -81,7 +81,7 @@ def upload_matlab(runlog, runlog_extra):
     # Save data to a MAT file in the specified directory
     scipy.io.savemat(os.path.join(directory, 'data.mat'), data)
 
-def plot_traj_kepler(plot_data):
+def plot_traj_kepler(plot_data, model_path):
     positions = [state[:3] for state in plot_data]
     velocities = [state[3:6] for state in plot_data]
 
@@ -120,7 +120,13 @@ def plot_traj_kepler(plot_data):
     ax.view_init(elev=90, azim=-90)
     ax.legend()
 
-    plt.show()
+    directory_path = os.path.dirname(args.model_dir)    # each interval zip file
+    last_directory = os.path.basename(directory_path)   # model name
+    interval_number = os.path.basename(model_path)   # model name
+    plot_folder = os.path.join(os.getcwd(), 'Plots', last_directory)    # plot folder for model
+    plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')  
+    plt.show()   
+    fig1.savefig(plot_name_png)
 
 def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, amu):
     # Ensure the model file has a .zip extension
@@ -178,7 +184,7 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
         run_log = wrapped_env.get_state_logs()
 
         plotting_data = [log['Plotting'] for log in extra_info_logs]
-        plot_traj_kepler(plotting_data)
+        plot_traj_kepler(plotting_data, model_path)
 
         if num_episodes != 1:
             print(f"Episode {episode + 1} finished.")
@@ -202,14 +208,7 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
         # ax.set_ylim([-axes_scale, axes_scale])  # Set Y-axis limit
         # ax.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
         # ax.set_box_aspect([1,1,1])
-        
-        # directory_path = os.path.dirname(args.model_dir)    # each interval zip file
-        # last_directory = os.path.basename(directory_path)   # model name
-        # interval_number = os.path.basename(model_path)   # model name
-        # plot_folder = os.path.join(os.getcwd(), 'Plots', last_directory)    # plot folder for model
-        # plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')  
-        # plt.show()   
-        # fig1.savefig(plot_name_png)
+    
         
 def display_plots():
     directory_path = os.path.dirname(args.model_dir)    # each interval zip file
@@ -283,5 +282,5 @@ if __name__ == '__main__':
         using_reachability=using_reachability
     )
 
-    load_and_run_model(model_path=args.model_dir, env=env, num_episodes=args.episodes, rI=r0, rT=rT, tof=tof, amu=amu, num_nodes=N_NODES)
-    # display_plots()
+    # load_and_run_model(model_path=args.model_dir, env=env, num_episodes=args.episodes, rI=r0, rT=rT, tof=tof, amu=amu, num_nodes=N_NODES)
+    display_plots()
