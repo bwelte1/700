@@ -111,12 +111,20 @@ def plot_traj_kepler(plot_data):
     ax.set_zlabel('Z Position (km)')
     ax.set_title('Spacecraft Position Relative to the Sun')
 
+    axes_scale = 2e8
+    ax.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
+    ax.set_ylim([-axes_scale, axes_scale])  # Set Y-axis limit
+    ax.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
+    ax.set_box_aspect([1,1,1])
+
     ax.view_init(elev=90, azim=-90)
     ax.legend()
 
     plt.show()
 
-def load_and_run_model(model_path, env, num_episodes, r0, rT):
+ # load_and_run_model(args.model_dir, env, args.episodes, r0, rT, tof, amu, num_nodes=N_NODES)
+
+def load_and_run_model(model_path, env, num_episodes, r0, rT, tof, amu, N_NODES):
     # Ensure the model file has a .zip extension
     model_file_path = f"{model_path}.zip" if not model_path.endswith(".zip") else model_path
     
@@ -127,30 +135,31 @@ def load_and_run_model(model_path, env, num_episodes, r0, rT):
     wrapped_env = EnvLoggingWrapper(env)
 
     for episode in range(num_episodes):
-        fig1 = plt.figure()
-        ax = fig1.add_subplot(111, projection='3d')  # Create 3D axes
+        # fig1 = plt.figure()
+        # ax = fig1.add_subplot(111, projection='3d')  # Create 3D axes
         obs = wrapped_env.reset()
         r_prev = obs[:3]
         v_prev = obs[3:6]
         done = False
         while not done:
-            print(f"Analysis of next arc")
+            # print(f"Analysis of next arc")
             # Plot Lambert
             action, _states = model1.predict(obs)
             obs, reward, done, truncated, info = wrapped_env.step(action)
-            r_new = obs[:3]
-            print(f"v_prev: {v_prev}")
-            l = lambert_problem(r1=r_prev, r2=r_new, tof=((tof/N_NODES)*DAY2SEC), mu=amu, max_revs=0) 
-            r_prev = r_new
-            v_new = l.get_v1()[0]
-            print(f"v_new: {v_new}")
-            dv = np.subtract(v_new, v_prev)
-            print(f"dv: {dv}")
-            print(f"norm: {norm(dv)}")
-            print(obs[6])
-            v_prev = obs[3:6]
-            pk.orbit_plots.plot_lambert(l, axes=ax)
-            ax.scatter(r_new[0], r_new[1], r_new[2], c='k', marker='o', s=10) 
+
+            # r_new = obs[:3]
+            # print(f"v_prev: {v_prev}")
+            # l = lambert_problem(r1=r_prev, r2=r_new, tof=((tof/N_NODES)*DAY2SEC), mu=amu, max_revs=0) 
+            # r_prev = r_new
+            # v_new = l.get_v1()[0]
+            # print(f"v_new: {v_new}")
+            # dv = np.subtract(v_new, v_prev)
+            # print(f"dv: {dv}")
+            # print(f"norm: {norm(dv)}")
+            # print(obs[6])
+            # v_prev = obs[3:6]
+            # pk.orbit_plots.plot_lambert(l, axes=ax)
+            # ax.scatter(r_new[0], r_new[1], r_new[2], c='k', marker='o', s=10) 
             
             # Plot Kepler
             # v_current = obs[3:6]
@@ -183,27 +192,27 @@ def load_and_run_model(model_path, env, num_episodes, r0, rT):
         # positions_alt.append(sun)
         # plot_run(positions_alt, r0, rT)
         
-        ax.set_title("Combined Trajectory of All Episodes")
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.set_zlabel("z")
-        ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100)  # Sun at origin
-        ax.scatter(rI[0], rI[1], rI[2], c='b', marker='o', s=50)  # Earth
-        ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Mars
-        # set axis limits to ensure all axes are on the same scale
-        axes_scale = 2e8
-        ax.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
-        ax.set_ylim([-axes_scale, axes_scale])  # Set Y-axis limit
-        ax.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
-        ax.set_box_aspect([1,1,1])
+        # ax.set_title("Combined Trajectory of All Episodes")
+        # ax.set_xlabel("x")
+        # ax.set_ylabel("y")
+        # ax.set_zlabel("z")
+        # ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100)  # Sun at origin
+        # ax.scatter(rI[0], rI[1], rI[2], c='b', marker='o', s=50)  # Earth
+        # ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Mars
+        # # set axis limits to ensure all axes are on the same scale
+        # axes_scale = 2e8
+        # ax.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
+        # ax.set_ylim([-axes_scale, axes_scale])  # Set Y-axis limit
+        # ax.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
+        # ax.set_box_aspect([1,1,1])
         
-        directory_path = os.path.dirname(args.model_dir)    # each interval zip file
-        last_directory = os.path.basename(directory_path)   # model name
-        interval_number = os.path.basename(model_path)   # model name
-        plot_folder = os.path.join(os.getcwd(), 'Plots', last_directory)    # plot folder for model
-        plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')  
-        plt.show()   
-        fig1.savefig(plot_name_png)
+        # directory_path = os.path.dirname(args.model_dir)    # each interval zip file
+        # last_directory = os.path.basename(directory_path)   # model name
+        # interval_number = os.path.basename(model_path)   # model name
+        # plot_folder = os.path.join(os.getcwd(), 'Plots', last_directory)    # plot folder for model
+        # plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')  
+        # plt.show()   
+        # fig1.savefig(plot_name_png)
         
 def display_plots():
     directory_path = os.path.dirname(args.model_dir)    # each interval zip file
@@ -215,7 +224,7 @@ def display_plots():
         
     for interval in os.listdir(directory_path):
         path = f'{directory_path}/{interval}'
-        load_and_run_model(path, env, args.episodes, r0, rT, tof, amu, num_nodes)
+        load_and_run_model(path, env, args.episodes, r0, rT, tof, amu, N_NODES)
 
 if __name__ == '__main__':
     import argparse
@@ -228,7 +237,6 @@ if __name__ == '__main__':
         help='Input settings file')
     parser.add_argument('--model_dir', type=str, required=True, help="Path to the saved model directory")
     parser.add_argument('--episodes', type=int, default=1, help="Number of episodes to run")
-    parser.add_argument('--settings', type=str, default="settings_def.txt", help='Input settings file')
     args = parser.parse_args()
     settings_file = "./settings_files/" + args.settings
     
@@ -278,5 +286,5 @@ if __name__ == '__main__':
         using_reachability=using_reachability
     )
 
-    load_and_run_model(args.model_dir, env, args.episodes, r0, rT, tof, amu, num_nodes=N_NODES)
+    load_and_run_model(args.model_dir, env, args.episodes, r0, rT, tof, amu, N_NODES)
     # display_plots()
