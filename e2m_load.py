@@ -116,7 +116,7 @@ def plot_traj_kepler(plot_data):
 
     plt.show()
 
-def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes):
+def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, amu):
     # Ensure the model file has a .zip extension
     model_file_path = f"{model_path}.zip" if not model_path.endswith(".zip") else model_path
     
@@ -172,7 +172,6 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes):
 
         plotting_data = [log['Plotting'] for log in extra_info_logs]
         plot_traj_kepler(plotting_data)
-
 
         if num_episodes != 1:
             print(f"Episode {episode + 1} finished.")
@@ -278,5 +277,5 @@ if __name__ == '__main__':
         using_reachability=using_reachability
     )
 
-    load_and_run_model(args.model_dir, env, args.episodes, r0, rT, tof, amu, num_nodes=N_NODES)
+    load_and_run_model(model_path=args.model_dir, env=env, num_episodes=args.episodes, rI=r0, rT=rT, tof=tof, amu=amu, num_nodes=N_NODES)
     # display_plots()
