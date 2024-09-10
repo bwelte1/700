@@ -173,9 +173,9 @@ class Earth2MarsEnv(gym.Env):
         reward = mass_next - self.m_current
 
         for ii in range(len(action)):
-            reward -= 100*max(0, abs(action[ii]) - 1)
+            reward -= 100*max(0, abs(action[ii]) - 1)   # added punishment for actions > 1
 
-        reward -= 0.05*((max(0, norm(dv) - self.max_thrust)) ** 2)
+        reward -= 0.05*((max(0, norm(dv) - self.max_thrust)) ** 2)  # added punishment for dv > dv_max
 
         return reward
     
