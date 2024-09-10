@@ -149,8 +149,6 @@ class Earth2MarsEnv(gym.Env):
         # print("Reward: " + str(reward))
         #print("")
 
-        
-
         self.r_current = r_next
         self.v_current = v_next
         
@@ -230,8 +228,6 @@ class Earth2MarsEnv(gym.Env):
                 if (Compare == True):
                     state_alt = self.without_reach(action)
                     self.extra_info['state_alt'] = state_alt.copy()
-
-
 
                 #ALTERNATE REACHABILTY FORMULATION 
                 # #Creates characteristic ellipsoid matrix and performs eigendecomposition

@@ -116,7 +116,7 @@ def plot_traj_kepler(plot_data):
 
     plt.show()
 
-def load_and_run_model(model_path, env, num_episodes, r0, rT):
+def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes):
     # Ensure the model file has a .zip extension
     model_file_path = f"{model_path}.zip" if not model_path.endswith(".zip") else model_path
     
@@ -254,7 +254,7 @@ if __name__ == '__main__':
     amu = MU_SUN / 1e9              # km^3/s^2, Gravitational constant of the central body
     rconv = 149600000.              # position, km (sun-earth)
     vconv = np.sqrt(amu/rconv)      # velocity, km/s
-    v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658 if Isp = 2000
+    v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity
 
     # Example initial conditions
     r0 = (-140699693.0, -51614428.0, 980.0)  # Earth position
