@@ -214,7 +214,7 @@ def display_plots():
         
     for interval in os.listdir(directory_path):
         path = f'{directory_path}/{interval}'
-        load_and_run_model(path, env, args.episodes, r0, rT, tof, amu, num_nodes)
+        load_and_run_model(path, env, args.episodes, r0, rT, tof, amu, N_NODES)
 
 if __name__ == '__main__':
     import argparse

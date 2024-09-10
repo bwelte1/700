@@ -395,11 +395,6 @@ class Earth2MarsEnv(gym.Env):
         self.extra_info['Plotting'] = self.plotting.copy()
         return state_alt, v_delta_alt
 
-    
-
-        
-
-
 # if __name__ == '__main__':
 #     env = Earth2MarsEnv(N_NODES=10, amu=5, mission_time=500, v0 = array([0,0,0]), r0=array([0,0,0]), vT=[1,1,1], rT=[1,1,1], m0=1000, max_thrust=0.005)
 #     # If the environment don't follow the interface, an error will be thrown
