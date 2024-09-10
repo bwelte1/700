@@ -21,9 +21,10 @@ from matplotlib import use as mpl_use
 import pykep as pk
 from pykep.planet import _base, jpl_lp
 from pykep.core import epoch, lambert_problem
-from pykep import MU_SUN
+from pykep import MU_SUN, G0
 
 from e2m_env import Earth2MarsEnv
+from e2m_load import load_and_run_model
 
 def plotRun(state_logs,r0,rT):
 
@@ -99,20 +100,20 @@ if __name__ == '__main__':
     stats_window_size = int(stats_window_size)
     verbose = bool(int(verbose))
     _init_setup_model = bool(int(_init_setup_model))
+    m0 = float(m_initial)
     
     # Physical constants
     amu = MU_SUN / 1e9              # km^3/s^2, Gravitational constant of the central body
-    rconv = 149600000.              # position, km
+    rconv = 149600000.              # position, km (sun-earth)
     vconv = np.sqrt(amu/rconv)      # velocity, km/s
     tconv = rconv/vconv             # time, s
-    mconv = 1000.                   # mass, kg
     aconv = vconv/tconv             # acceleration, km/s^2
-    fconv = mconv*aconv             # force, kN
+    fconv = m0*aconv                # force, kN
     Isp = float(Isp)                # specific impulse of engine 
-    v_ejection = 100
-    #v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658 if Isp = 2000
-    # ## INITIAL CONDITIONS ##
-    # # planet models
+    # v_ejection = 100
+    v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658 if Isp = 2000
+    ## INITIAL CONDITIONS ##
+    # planet models
     earth = jpl_lp('earth')
     mars = jpl_lp('mars')
     
@@ -127,7 +128,6 @@ if __name__ == '__main__':
     v0 = (9.774596, -28.07828, 4.337725e-4)
     rT = (-172682023.0, 176959469.0, 7948912.0)
     vT = (-16.427384, -14.860506, 9.21486e-2)
-    m0 = float(m_initial)
     
     tof = int(tof)
 
@@ -249,8 +249,11 @@ if __name__ == '__main__':
     print("Learning Commenced")
     for i in range(iters):
         model.learn(total_timesteps=Interval, reset_num_timesteps=False, tb_log_name="Data")
-        model.save(f"{models_dir}/{Interval*(i+1)}")
-        print(f"Model saved at timestep {Interval*(i+1)}")
+        model_path = f"{models_dir}/{Interval*(i+1)}"
+        if (i > 88) or (i < 5) or (i==20) or (i==40) or (i==60) or (i==80):
+            model.save(model_path)
+            print(f"Model: {model_path}")
+            print(f"Model saved at timestep {Interval*(i+1)}")            
     
     # Run_log = wrapped_env.get_state_logs()
     # plotRun(Run_log,r0,rT)

@@ -28,7 +28,7 @@ class Earth2MarsEnv(gym.Env):
     Class inputs:
         - N_NODES:           Number of trajectory segments
         - amu:              Gravitational constant of central body
-        - mission_time:     total mission time, s
+        - mission_time:     total mission time, years
         - v0:               initial velocity, km/s, list 
         - r0:               initial position, km, list
         - vT:               target velocity
@@ -90,7 +90,7 @@ class Earth2MarsEnv(gym.Env):
         
         """ ENVIRONMENT BOUNDARIES """
         coe0 = ic2par(r = self.r0, v = self.v0, mu = self.amu)    # initial classical orbital element of the S/C
-        coeT = ic2par(r = self.rT, v = self.vT, mu = self.amu)  # classical orbital element of the target
+        coeT = ic2par(r = self.rT, v = self.vT, mu = self.amu)      # classical orbital element of the target
         rpT = coeT[0]*(1 - coeT[1])                               # periapsis radius of the target, km
         raT = coeT[0]*(1 + coeT[1])                               # apoapsis radius of the target, km
         vpT = sqrt(self.amu*(2./rpT - 1/coeT[0]))                 # periapsis velocity of the target, km/s
@@ -106,7 +106,7 @@ class Earth2MarsEnv(gym.Env):
         # Upper bounds
         o_ub = np.array([+self.max_r, +self.max_r, +self.max_r, \
             +self.max_v, +self.max_v, +self.max_v, \
-            1., 1.])
+            m0, mission_time*DAY2SEC])
         
         self.observation_space = spaces.Box(o_lb, o_ub, dtype=np.float64)
         
@@ -117,8 +117,6 @@ class Earth2MarsEnv(gym.Env):
         a_ub = np.array([1., 1., 1.])
 
         self.action_space = spaces.Box(a_lb, a_ub, dtype=np.float64)
-
-
 
     def step(self, action):
         # Simulate one time step in the environment
@@ -194,7 +192,7 @@ class Earth2MarsEnv(gym.Env):
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
         r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
-        dv = 0
+        dv = [0, 0, 0]
         if (self.N_NODES-1) > self.training_steps:
             if (self.using_reachability == 1):   
                 state0 = np.concatenate((self.r_current, self.v_current))
@@ -227,6 +225,11 @@ class Earth2MarsEnv(gym.Env):
                 semiAxes = delta_r_max + np.transpose(r_centre)
                 #self.extra_info['semiAxes'] = delta_r_max
                 #print("Max position change: " + str(delta_r_max))
+                
+                Compare = True
+                if (Compare == True):
+                    state_alt = self.without_reach(action)
+                    self.extra_info['state_alt'] = state_alt.copy()
 
 
 
@@ -251,9 +254,8 @@ class Earth2MarsEnv(gym.Env):
 
                 #Finds velocity at next stage using lambert and produces dv
                 final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
-                v_next = final_step_lambert.get_v2()[0]
-
                 v_r1 = final_step_lambert.get_v1()[0]
+                v_next = final_step_lambert.get_v2()[0]
                 #print(v_next)
                 dv = np.subtract(v_r1,self.v_current)
                 self.plotting = np.concatenate((self.r_current, v_r1))
@@ -281,7 +283,7 @@ class Earth2MarsEnv(gym.Env):
 
             # Equalization with mars (step N)
             lambert_v2 = final_step_lambert.get_v2()[0]
-            dv_equalization = array(self.vT) - array(lambert_v2) # velocity of mars - velocity at final step 
+            dv_equalization = np.subtract(array(self.vT), array(lambert_v2)) # velocity of mars - velocity at final step 
             m_next = self.Tsiolkovsky(array(dv_equalization))
 
             self.m_current = carry_m
@@ -305,6 +307,9 @@ class Earth2MarsEnv(gym.Env):
         self.time_passed = 0.
         self.isDone = False
         self.training_steps = 0
+        dvx = 0
+        dvy = 0
+        dvz = 0
         
         # Reset parameters
         self.sol = {'rx': [], 'ry': [], 'rz': [],
