@@ -203,6 +203,11 @@ class Earth2MarsEnv(gym.Env):
                 statef = np.concatenate((r_centre, v_centre))
                 #print("Yaw: " + str(action[0]) + " Pitch: " + str(action[1]) + " Radius: " + str(action[2]))
 
+
+
+
+
+
                 delta_v_max_RTN = self.max_thrust*np.eye(3)
 
                 #Gets current STM
@@ -212,7 +217,8 @@ class Earth2MarsEnv(gym.Env):
                 #print("Useful untransformed STM: " + str(STM_Current))
 
                 #Obtains RTN State Transition Matrix
-                STM_RTN = np.dot(YA.DCM_LVLH2RTN(), STM_Current)
+                #STM_RTN = np.dot(YA.DCM_LVLH2RTN(), STM_Current)
+                STM_RTN = YA.DCM_LVLH2RTN() @ STM_Current @ np.transpose(YA.DCM_LVLH2RTN())
 
                 #Constructs Rotation Matrices
                 M_RTN2ECI_init = YA.RotMat_RTN2Inertial(state0)
@@ -222,15 +228,56 @@ class Earth2MarsEnv(gym.Env):
                 #Obtains HCI Frame STM
                 STM_HCI = M_RTN2ECI_f @ STM_RTN @ M_RTN2ECI_init_T
 
+
+                STM_SQUARED = np.transpose(STM_HCI @ STM_HCI)
+
+                eigvals, eigvecs = np.linalg.eig(STM_SQUARED)
+
+                idx = eigvals.argsort()[::-1]
+                norm_indices_s = np.argsort(-eigvals)
+                
+                eigvals = eigvals[idx]
+                eigvecs = eigvecs[:, idx]
+
+                aligned = STM_HCI @ eigvecs
+
+                radius = aligned[:,0]
+                transverse = aligned[:,1]
+                normal = aligned[:,2]
+
+                radius_rtn = np.transpose(YA.RotMat_RTN2Inertial(statef)) @ radius
+                transverse_rtn = np.transpose(YA.RotMat_RTN2Inertial(statef)) @ transverse
+                normal_rtn = np.transpose(YA.RotMat_RTN2Inertial(statef)) @ normal
+                
+                RS_axes_ordered = np.zeros((3, 3))
+
+                # Ordered TRN
+                RS_axes_ordered[:, 0] = radius * np.sign(radius_rtn[1])
+                RS_axes_ordered[:, 1] = transverse * np.sign(transverse_rtn[0])
+                RS_axes_ordered[:, 2] = normal * np.sign(normal_rtn[2])
+
+
                 #print(STM_HCI)
 
-                delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
-                delta_r_max = np.dot(STM_HCI,delta_v_max_HCI)
-                print("Max Change in distance = " + str(delta_r_max))
-                semiAxes_pos = np.transpose(r_centre) + delta_r_max 
-                semiAxes_neg = np.transpose(r_centre) - delta_r_max 
-                semiAxes = np.concatenate([semiAxes_pos, semiAxes_neg])
-                self.extra_info['semiAxes'] = semiAxes
+                # delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
+
+                # delta_r_max = STM_HCI @ delta_v_max_HCI
+
+                r_next = self.action2pos(RS_axes_ordered, action, r_centre)
+                
+                p = np.zeros((3,6))
+                p[:,0] = r_centre + RS_axes_ordered[:, 0]*self.max_thrust
+                p[:,1] = r_centre - RS_axes_ordered[:, 0]*self.max_thrust
+                p[:,2] = r_centre + RS_axes_ordered[:, 1]*self.max_thrust
+                p[:,3] = r_centre - RS_axes_ordered[:, 1]*self.max_thrust
+                p[:,4] = r_centre + RS_axes_ordered[:, 2]*self.max_thrust
+                p[:,5] = r_centre - RS_axes_ordered[:, 2]*self.max_thrust
+
+                # print("Max Change in distance = " + str(delta_r_max))
+                # semiAxes_pos = np.transpose(r_centre) + delta_r_max 
+                # semiAxes_neg = np.transpose(r_centre) - delta_r_max 
+                # semiAxes = np.concatenate([semiAxes_pos, semiAxes_neg])
+                self.extra_info['semiAxes'] = p
                 #print("Max position change: " + str(delta_r_max))
 
                 #ALTERNATE REACHABILTY FORMULATION 
@@ -245,14 +292,14 @@ class Earth2MarsEnv(gym.Env):
                 #print("Action: " + str(action))
 
                 #Maps action to points within ellipse to find distance from centre of ellipse
-                offset_position = self.action2pos(delta_r_max, action)
+                
                 #print("Position Offset: " + str(offset_position))
 
-                #Adds offset to centre position
-                r_next = [a + b for a, b in zip(r_centre, offset_position)]
                 #print("Next Position: " + str(r_next))
 
                 #Finds velocity at next stage using lambert and produces dv
+                print(r_next)
+                print(self.r_current)
                 final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 v_r1 = final_step_lambert.get_v1()[0]
                 v_next = final_step_lambert.get_v2()[0]
@@ -356,7 +403,7 @@ class Earth2MarsEnv(gym.Env):
         axes_sorted = axes[:, norm_indices_s]
         return axes_sorted
 
-    def action2pos(self, axes, action):
+    def action2pos(self, axes, action, r_centre):
         print("Action: " + str(action))
         
         #Denormalising angles
@@ -366,18 +413,36 @@ class Earth2MarsEnv(gym.Env):
 
         #print("Yaw, pitch, and r" + str([yaw, pitch, r]))
         
-        # Spherical to Cartesian
-        x = r * np.cos(pitch) * np.cos(yaw)
-        y = r * np.cos(pitch) * np.sin(yaw)
-        z = r * np.sin(pitch)
-        
-        # Map the Cartesian coordinates to the ellipsoid axes
-        pos = x * axes[:, 0] + y * axes[:, 1] + z * axes[:, 2]
-        
-        #Eliminating very small values
-        pos[np.abs(pos) < 1e-10] = 0
+        # Spherical to Cartesian and Scale with ellipsoid
+        x = r * np.cos(pitch) * np.cos(yaw) * self.max_thrust
+        y = r * np.cos(pitch) * np.sin(yaw) * self.max_thrust
+        z = r * np.sin(pitch) * self.max_thrust
 
-        return pos
+        points = np.zeros((3,1))
+        points[0] = x
+        points[1] = y
+        points[2] = z
+
+        #Align with ellipsoid
+        aligned_point = axes @ points
+        aligned_point = np.reshape(aligned_point,(1,3))
+        print(aligned_point)
+
+        #Translate to centre
+        print("TP:")
+       
+        translated_point = aligned_point + r_centre
+        print(translated_point)
+
+        translated_point = np.squeeze(translated_point)
+        
+        # # Map the Cartesian coordinates to the ellipsoid axes
+        # pos = x * axes[:, 0] + y * axes[:, 1] + z * axes[:, 2]
+        
+        # #Eliminating very small values
+        # pos[np.abs(pos) < 1e-10] = 0
+        #Point within ellipsoid
+        return translated_point
     
     def without_reach(self, action):
         yaw_alt = action[0] * np.pi                 # [-π to π]
@@ -398,6 +463,8 @@ class Earth2MarsEnv(gym.Env):
         self.plotting = np.concatenate((self.r_current, v_current_alt))
         self.extra_info['Plotting'] = self.plotting.copy()
         return state_alt, v_delta_alt
+    
+
 
 # if __name__ == '__main__':
 #     env = Earth2MarsEnv(N_NODES=10, amu=5, mission_time=500, v0 = array([0,0,0]), r0=array([0,0,0]), vT=[1,1,1], rT=[1,1,1], m0=1000, max_thrust=0.005)

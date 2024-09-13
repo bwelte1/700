@@ -142,27 +142,27 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points):
 
 def plot_ellipsoid(ellipsoid, ax):
     # X-axis: points 1 and 4, Y-axis: points 2 and 5, Z-axis: points 3 and 6
-    center = np.mean(ellipsoid, axis=0)
+    #center = np.mean(ellipsoid, axis=0)
 
-    # Calculate semi-axes lengths (half the distance between opposite points)
-    semi_axes = [np.linalg.norm(ellipsoid[0] - ellipsoid[3]) / 2,  # X-axis
-                 np.linalg.norm(ellipsoid[1] - ellipsoid[4]) / 2,  # Y-axis
-                 np.linalg.norm(ellipsoid[2] - ellipsoid[5]) / 2]  # Z-axis
+    # # Calculate semi-axes lengths (half the distance between opposite points)
+    # semi_axes = [np.linalg.norm(ellipsoid[0] - ellipsoid[3]) / 2,  # X-axis
+    #              np.linalg.norm(ellipsoid[1] - ellipsoid[4]) / 2,  # Y-axis
+    #              np.linalg.norm(ellipsoid[2] - ellipsoid[5]) / 2]  # Z-axis
 
-    # Create parametric angles for the ellipsoid surface
-    u = np.linspace(0, 2 * np.pi, 10)
-    v = np.linspace(0, np.pi, 10)
-    u, v = np.meshgrid(u, v)
+    # # Create parametric angles for the ellipsoid surface
+    # u = np.linspace(0, 2 * np.pi, 10)
+    # v = np.linspace(0, np.pi, 10)
+    # u, v = np.meshgrid(u, v)
 
-    # Parametric equations of the ellipsoid
-    x = semi_axes[0] * np.cos(u) * np.sin(v)
-    y = semi_axes[1] * np.sin(u) * np.sin(v)
-    z = semi_axes[2] * np.cos(v)
+    # # Parametric equations of the ellipsoid
+    # x = semi_axes[0] * np.cos(u) * np.sin(v)
+    # y = semi_axes[1] * np.sin(u) * np.sin(v)
+    # z = semi_axes[2] * np.cos(v)
 
-    # Add the center to shift the ellipsoid to the correct position
-    x += center[0]
-    y += center[1]
-    z += center[2]
+    # # Add the center to shift the ellipsoid to the correct position
+    # x += center[0]
+    # y += center[1]
+    # z += center[2]
 
     # Plot the ellipsoid surface
     #ax.plot_surface(x, y, z, color='b', alpha=0.5)
