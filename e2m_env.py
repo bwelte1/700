@@ -127,11 +127,16 @@ class Earth2MarsEnv(gym.Env):
         #Clips action
         action = np.clip(action, self.action_space.low, self.action_space.high)
 
+        #Manually set action
+        manual_action = [0, 0, 1]
+
+
         # Invalid action
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         
         # State at next time step and current control
-        r_next, v_next, m_next, dv = self.propagation_step(action)
+        r_next, v_next, m_next, dv = self.propagation_step(manual_action)
+        #r_next, v_next, m_next, dv = self.propagation_step(action)
             
         # Info (state at the beginning of the segment)
         self.sol['rx'] = self.r_current[0]
@@ -152,8 +157,8 @@ class Earth2MarsEnv(gym.Env):
         self.r_current = r_next
         self.v_current = v_next
         
-        # print("DV: " + str(dv))
-        # print("Norm DV: " + str(norm(dv)))
+        print("DV: " + str(dv))
+        print("Norm DV: " + str(norm(dv)))
         reward = self.getReward(m_next, action, dv)
 
         self.m_current = m_next
@@ -189,6 +194,7 @@ class Earth2MarsEnv(gym.Env):
         
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
+        #print(action)
         r_centre, v_centre = propagate_lagrangian(r0 = self.r_current, v0 = self.v_current, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
         dv = [0, 0, 0]
         if (self.N_NODES-1) > self.training_steps:
@@ -220,6 +226,7 @@ class Earth2MarsEnv(gym.Env):
 
                 delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
                 delta_r_max = np.dot(STM_HCI,delta_v_max_HCI)
+                print("Max Change in distance = " + str(delta_r_max))
                 semiAxes_pos = np.transpose(r_centre) + delta_r_max 
                 semiAxes_neg = np.transpose(r_centre) - delta_r_max 
                 semiAxes = np.concatenate([semiAxes_pos, semiAxes_neg])
@@ -350,7 +357,7 @@ class Earth2MarsEnv(gym.Env):
         return axes_sorted
 
     def action2pos(self, axes, action):
-        #print("Action: " + str(action))
+        print("Action: " + str(action))
         
         #Denormalising angles
         yaw = action[0] * np.pi                 # [-π to π]

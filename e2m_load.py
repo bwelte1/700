@@ -165,10 +165,13 @@ def plot_ellipsoid(ellipsoid, ax):
     z += center[2]
 
     # Plot the ellipsoid surface
-    ax.plot_surface(x, y, z, color='b', alpha=0.5)
+    #ax.plot_surface(x, y, z, color='b', alpha=0.5)
+
+    colors = ['r', 'g', 'k', 'c', 'm', 'y']
 
     # Plot the original points as scatter
-    ax.scatter(ellipsoid[:, 0], ellipsoid[:, 1], ellipsoid[:, 2], color='r')
+    for i in range(ellipsoid.shape[0]):
+        ax.scatter(ellipsoid[i, 0], ellipsoid[i, 1], ellipsoid[i, 2], color=colors[i])
 
 def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, amu):
     # Ensure the model file has a .zip extension
@@ -325,5 +328,5 @@ if __name__ == '__main__':
         using_reachability=using_reachability
     )
 
-    # load_and_run_model(model_path=args.model_dir, env=env, num_episodes=args.episodes, rI=r0, rT=rT, tof=tof, amu=amu, num_nodes=N_NODES)
+    load_and_run_model(model_path=args.model_dir, env=env, num_episodes=args.episodes, rI=r0, rT=rT, tof=tof, amu=amu, num_nodes=N_NODES)
     display_plots()
