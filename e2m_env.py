@@ -19,6 +19,7 @@ import YA
 
 import os
 
+
 """ RL ENVIRONMENT CLASS """
 class Earth2MarsEnv(gym.Env):
     """

@@ -210,6 +210,7 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
         # print("Ellipsoid Points: " + str(ellipsoid_points))
         plotting_data = [log['Plotting'] for log in extra_info_logs]
         plot_traj_kepler(plotting_data, model_path, ellipsoid_points)
+        
 
         if num_episodes != 1:
             print(f"Episode {episode + 1} finished.")
