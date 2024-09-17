@@ -86,6 +86,7 @@ class Earth2MarsEnv(gym.Env):
         self.extra_info = {}
         # Timing
         self.TIME_STEP = self.mission_time / self.N_NODES
+        #print(self.TIME_STEP)
         self.training_steps = 0
         
         """ ENVIRONMENT BOUNDARIES """
@@ -125,17 +126,17 @@ class Earth2MarsEnv(gym.Env):
         # Return observation, reward, and done flag
         
         #Clips action
-        action = np.clip(action, self.action_space.low, self.action_space.high)
+        #action = np.clip(action, self.action_space.low, self.action_space.high)
 
         #Manually set action
-        manual_action = [0, 0, 1]
+        #manual_action = [1, 1, 1]
 
 
         # Invalid action
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         
         # State at next time step and current control
-        r_next, v_next, m_next, dv = self.propagation_step(manual_action)
+        r_next, v_next, m_next, dv = self.propagation_step(action)
         #r_next, v_next, m_next, dv = self.propagation_step(action)
             
         # Info (state at the beginning of the segment)
@@ -157,8 +158,8 @@ class Earth2MarsEnv(gym.Env):
         self.r_current = r_next
         self.v_current = v_next
         
-        print("DV: " + str(dv))
-        print("Norm DV: " + str(norm(dv)))
+        # print("DV: " + str(dv))
+        # print("Norm DV: " + str(norm(dv)))
         reward = self.getReward(m_next, action, dv)
 
         self.m_current = m_next
@@ -175,13 +176,21 @@ class Earth2MarsEnv(gym.Env):
         return obs, reward, self.isDone, truncated, info
     
     def getReward(self, mass_next, action, dv):
-        reward = mass_next - self.m_current
+        # reward = mass_next - self.m_current
+        # print("DeltaV: " + str(norm(dv)))
+        # print("Initial Mass: " + str(self.m_current) + " Final Mass: " + str(mass_next))
+        # print("Mass Change: " + str(reward))
+        reward = 0
+        reward -= norm(dv) * 20
 
         for ii in range(len(action)):
+            if abs(abs(action[ii]) > 1):
+                reward -= 25
             reward -= 100*max(0, abs(action[ii]) - 1)   # added punishment for actions > 1
 
-        reward -= 0.05*((max(0, norm(dv) - self.max_thrust)) ** 2)  # added punishment for dv > dv_max
+        # reward -= 0.05*((max(0, norm(dv) - self.max_thrust)) ** 2)  # added punishment for dv > dv_max
 
+        # print(reward)
         return reward
     
         # if (norm(self.r_current) < norm(self.r0)):
@@ -202,13 +211,6 @@ class Earth2MarsEnv(gym.Env):
                 state0 = np.concatenate((self.r_current, self.v_current))
                 statef = np.concatenate((r_centre, v_centre))
                 #print("Yaw: " + str(action[0]) + " Pitch: " + str(action[1]) + " Radius: " + str(action[2]))
-
-
-
-
-
-
-                delta_v_max_RTN = self.max_thrust*np.eye(3)
 
                 #Gets current STM
                 STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
@@ -234,7 +236,6 @@ class Earth2MarsEnv(gym.Env):
                 eigvals, eigvecs = np.linalg.eig(STM_SQUARED)
 
                 idx = eigvals.argsort()[::-1]
-                norm_indices_s = np.argsort(-eigvals)
                 
                 eigvals = eigvals[idx]
                 eigvecs = eigvecs[:, idx]
@@ -256,22 +257,16 @@ class Earth2MarsEnv(gym.Env):
                 RS_axes_ordered[:, 1] = transverse * np.sign(transverse_rtn[0])
                 RS_axes_ordered[:, 2] = normal * np.sign(normal_rtn[2])
 
-
-                #print(STM_HCI)
-
-                # delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
-
-                # delta_r_max = STM_HCI @ delta_v_max_HCI
-
                 r_next = self.action2pos(RS_axes_ordered, action, r_centre)
                 
-                p = np.zeros((3,6))
+                p = np.zeros((3,7))
                 p[:,0] = r_centre + RS_axes_ordered[:, 0]*self.max_thrust
                 p[:,1] = r_centre - RS_axes_ordered[:, 0]*self.max_thrust
                 p[:,2] = r_centre + RS_axes_ordered[:, 1]*self.max_thrust
                 p[:,3] = r_centre - RS_axes_ordered[:, 1]*self.max_thrust
                 p[:,4] = r_centre + RS_axes_ordered[:, 2]*self.max_thrust
                 p[:,5] = r_centre - RS_axes_ordered[:, 2]*self.max_thrust
+                p[:,6] = r_centre
 
                 # print("Max Change in distance = " + str(delta_r_max))
                 # semiAxes_pos = np.transpose(r_centre) + delta_r_max 
@@ -298,8 +293,8 @@ class Earth2MarsEnv(gym.Env):
                 #print("Next Position: " + str(r_next))
 
                 #Finds velocity at next stage using lambert and produces dv
-                print(r_next)
-                print(self.r_current)
+                # print(r_next)
+                # print(self.r_current)
                 final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 v_r1 = final_step_lambert.get_v1()[0]
                 v_next = final_step_lambert.get_v2()[0]
@@ -328,10 +323,19 @@ class Earth2MarsEnv(gym.Env):
             self.plotting = np.concatenate((self.r_current, lambert_v1))
             self.extra_info['Plotting'] = self.plotting.copy()
 
+            # print("First")
+            # print(self.v_current)
+            # print(lambert_v1)
+            # print(dv_N_minus_1)
+
             # Equalization with mars (step N)
             lambert_v2 = final_step_lambert.get_v2()[0]
+            # print("First")
+            # print(self.vT)
+            # print(lambert_v2)
             dv_equalization = np.subtract(array(self.vT), array(lambert_v2)) # velocity of mars - velocity at final step 
             m_next = self.Tsiolkovsky(array(dv_equalization))
+            # print(dv_equalization)
 
             self.m_current = carry_m
             
@@ -404,7 +408,7 @@ class Earth2MarsEnv(gym.Env):
         return axes_sorted
 
     def action2pos(self, axes, action, r_centre):
-        print("Action: " + str(action))
+        # print("Action: " + str(action))
         
         #Denormalising angles
         yaw = action[0] * np.pi                 # [-π to π]
@@ -426,13 +430,9 @@ class Earth2MarsEnv(gym.Env):
         #Align with ellipsoid
         aligned_point = axes @ points
         aligned_point = np.reshape(aligned_point,(1,3))
-        print(aligned_point)
 
         #Translate to centre
-        print("TP:")
-       
         translated_point = aligned_point + r_centre
-        print(translated_point)
 
         translated_point = np.squeeze(translated_point)
         

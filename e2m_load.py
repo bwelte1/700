@@ -1,5 +1,5 @@
 # Example Run:
-# python e2m_load.py --settings settings_def.txt --model_dir saved_models/PPO/Model_10/2500000 --episodes 1
+# python e2m_load.py --settings settings_def.txt --model_dir saved_models/PPO/Model_27/3000000 --episodes 1
 
 import os
 import argparse
@@ -118,8 +118,10 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points):
     ax.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
     ax.set_box_aspect([1,1,1])
 
+    colours = ['red', 'black', 'green', 'orange', 'purple', 'cyan', 'gray']
     for ellipsoid in ellipsoid_points:
-        plot_ellipsoid(ellipsoid, ax)
+        for point in range(7):
+            ax.scatter(ellipsoid[0,point], ellipsoid[1,point], ellipsoid[2,point], color=colours[point])
 
     ax.view_init(elev=90, azim=-90)
     ax.legend()
@@ -136,36 +138,12 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points):
     interval_number = os.path.basename(model_path)   # model name
     plot_folder = os.path.join(os.getcwd(), 'Plots', last_directory)    # plot folder for model
     plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')  
-    fig1.savefig(plot_name_png)
+    # fig1.savefig(plot_name_png)
 
     plt.show()
 
 def plot_ellipsoid(ellipsoid, ax):
-    # X-axis: points 1 and 4, Y-axis: points 2 and 5, Z-axis: points 3 and 6
-    #center = np.mean(ellipsoid, axis=0)
 
-    # # Calculate semi-axes lengths (half the distance between opposite points)
-    # semi_axes = [np.linalg.norm(ellipsoid[0] - ellipsoid[3]) / 2,  # X-axis
-    #              np.linalg.norm(ellipsoid[1] - ellipsoid[4]) / 2,  # Y-axis
-    #              np.linalg.norm(ellipsoid[2] - ellipsoid[5]) / 2]  # Z-axis
-
-    # # Create parametric angles for the ellipsoid surface
-    # u = np.linspace(0, 2 * np.pi, 10)
-    # v = np.linspace(0, np.pi, 10)
-    # u, v = np.meshgrid(u, v)
-
-    # # Parametric equations of the ellipsoid
-    # x = semi_axes[0] * np.cos(u) * np.sin(v)
-    # y = semi_axes[1] * np.sin(u) * np.sin(v)
-    # z = semi_axes[2] * np.cos(v)
-
-    # # Add the center to shift the ellipsoid to the correct position
-    # x += center[0]
-    # y += center[1]
-    # z += center[2]
-
-    # Plot the ellipsoid surface
-    #ax.plot_surface(x, y, z, color='b', alpha=0.5)
 
     colors = ['r', 'g', 'k', 'c', 'm', 'y']
 
@@ -229,6 +207,7 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
         run_log = wrapped_env.get_state_logs()
 
         ellipsoid_points = [log['semiAxes'] for log in extra_info_logs]
+        # print("Ellipsoid Points: " + str(ellipsoid_points))
         plotting_data = [log['Plotting'] for log in extra_info_logs]
         plot_traj_kepler(plotting_data, model_path, ellipsoid_points)
 
@@ -299,7 +278,7 @@ if __name__ == '__main__':
     m0 = float(m_initial)
     Isp = float(Isp)                # specific impulse of engine 
     using_reachability = bool(int(using_reachability))
-    tof = int(tof)      # predetermined TOF
+    tof = float(tof)      # predetermined TOF
     
     amu = MU_SUN / 1e9              # km^3/s^2, Gravitational constant of the central body
     rconv = 149600000.              # position, km (sun-earth)

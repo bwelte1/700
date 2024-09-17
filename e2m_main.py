@@ -120,7 +120,7 @@ if __name__ == '__main__':
     # Timing
     start_date_julian = int(start_date_julian)  # departure date from earth
     departure_date_e = epoch(start_date_julian)
-    tof = int(tof)      # predetermined TOF
+    tof = float(tof)      # predetermined TOF
     arrival_date_e = epoch(tof+start_date_julian)
 
     #Same init conds as Zavoli Federici Table 1 (km and km/s)
@@ -128,8 +128,6 @@ if __name__ == '__main__':
     v0 = (9.774596, -28.07828, 4.337725e-4)
     rT = (-172682023.0, 176959469.0, 7948912.0)
     vT = (-16.427384, -14.860506, 9.21486e-2)
-    
-    tof = int(tof)
 
     #print([r0, v0, rT, vT, m0])
     # Can do lambert from earth to mars and get v1 and v2
@@ -250,7 +248,7 @@ if __name__ == '__main__':
     for i in range(iters):
         model.learn(total_timesteps=Interval, reset_num_timesteps=False, tb_log_name="Data")
         model_path = f"{models_dir}/{Interval*(i+1)}"
-        if (i > (iters - 4)) or (i < 4) or (((i-1)*Interval)%500000==0):   # take first and last 4 models and every 500kth sim
+        if (i > (iters - 4)) or (i < 4) or (((i-1)*Interval)%250000==0):   # take first and last 4 models and every 500kth sim
             model.save(model_path)
             print(f"Model: {model_path}")
             print(f"Model saved at timestep {Interval*(i+1)}")            
