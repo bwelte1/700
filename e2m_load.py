@@ -136,6 +136,9 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points):
     interval_number = os.path.basename(model_path)   # model name
     plot_folder = os.path.join(os.getcwd(), 'Plots', last_directory)    # plot folder for model
     plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')  
+    # Check if the plot folder exists, and create it if not
+    if not os.path.exists(plot_folder):
+        os.makedirs(plot_folder)
     fig1.savefig(plot_name_png)
 
     plt.show()
@@ -329,4 +332,4 @@ if __name__ == '__main__':
     )
 
     load_and_run_model(model_path=args.model_dir, env=env, num_episodes=args.episodes, rI=r0, rT=rT, tof=tof, amu=amu, num_nodes=N_NODES)
-    display_plots()
+    # display_plots()
