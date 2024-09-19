@@ -1,3 +1,5 @@
+# python e2m_main.py --settings settings_def.txt
+
 import argparse
 import time
 import os
@@ -26,6 +28,12 @@ from pykep import MU_SUN, G0
 from e2m_env import Earth2MarsEnv
 from e2m_load import load_and_run_model
 #
+
+def custom_lr_schedule(initial_value, final_value):
+    def func(progress_remaining):
+        # Linear interpolation between initial and final values
+        return initial_value * progress_remaining + final_value * (1 - progress_remaining)
+    return func
 
 def plotRun(state_logs,r0,rT):
 
@@ -84,7 +92,6 @@ if __name__ == '__main__':
     Tmax = float(Tmax)
     N_NODES = int(N_NODES)
     num_cpu = int(num_cpu)
-    init_learning_rate = float(init_learning_rate)
     init_clip_range = float(init_clip_range)
     ent_coef = float(ent_coef)
     nminibatches = int(nminibatches)
@@ -102,6 +109,8 @@ if __name__ == '__main__':
     verbose = bool(int(verbose))
     _init_setup_model = bool(int(_init_setup_model))
     m0 = float(m_initial)
+    initial_lr = float(initial_lr)
+    final_lr = float(final_lr)
     
     # Physical constants
     amu = MU_SUN / 1e9              # km^3/s^2, Gravitational constant of the central body
@@ -215,7 +224,7 @@ if __name__ == '__main__':
     model = PPO(
         policy='MlpPolicy', 
         env=wrapped_env, 
-        learning_rate=init_learning_rate, 
+        learning_rate=custom_lr_schedule(initial_lr, final_lr),
         n_steps=n_steps, 
         batch_size=batch_size,
         n_epochs=n_epochs, 
@@ -242,7 +251,7 @@ if __name__ == '__main__':
     )
     
     Interval = 250000  # Checkpoint interval
-    total_timesteps = 5000000 # One timestep specifies one impulse
+    total_timesteps = 1500000 # One timestep specifies one impulse
     iters = total_timesteps // Interval
 
     print("Learning Commenced")
