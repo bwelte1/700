@@ -25,7 +25,7 @@ from pykep.planet import _base, jpl_lp
 from pykep.core import epoch, lambert_problem
 from pykep import MU_SUN, G0
 
-from e2m_env import Earth2MarsEnv
+from e2m_env_planar import Earth2MarsEnvPlanar
 from e2m_load import load_and_run_model
 #
 
@@ -134,20 +134,17 @@ if __name__ == '__main__':
     arrival_date_e = epoch(tof+start_date_julian)
 
     #Same init conds as Zavoli Federici Table 1 (km and km/s)
-    r0 = (-140699693.0, -51614428.0, 980.0)
-    v0 = (9.774596, -28.07828, 4.337725e-4)
-    rT = (-172682023.0, 176959469.0, 7948912.0)
-    vT = (-16.427384, -14.860506, 9.21486e-2)
-
-
-
+    r0 = (-140699693.0, -51614428.0, 0)
+    v0 = (9.774596, -28.07828, 0)
+    rT = (-172682023.0, 176959469.0, 0)
+    vT = (-16.427384, -14.860506, 0)
 
     #print([r0, v0, rT, vT, m0])
     # Can do lambert from earth to mars and get v1 and v2
     
     using_reachability = bool(int(using_reachability))
     
-    env = Earth2MarsEnv(
+    env = Earth2MarsEnvPlanar(
         N_NODES=N_NODES, 
         amu=amu, 
         v0=v0, 
@@ -253,11 +250,11 @@ if __name__ == '__main__':
         tensorboard_log=logdir#Logging disabled for debugging, to enable : logdir
     )
     
-    Interval = 250000  # Checkpoint interval
-    total_timesteps = 1500000 # One timestep specifies one impulse
+    Interval = 1000  # Checkpoint interval
+    total_timesteps = 2000 # One timestep specifies one impulse
     iters = total_timesteps // Interval
 
-    print("Learning Commenced")
+    print("Planar Learning Commenced")
     for i in range(iters):
         model.learn(total_timesteps=Interval, reset_num_timesteps=False, tb_log_name="Data")
         model_path = f"{models_dir}/{Interval*(i+1)}"
