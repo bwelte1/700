@@ -1,4 +1,4 @@
-# python e2m_main.py --settings settings_def.txt
+# python e2m_main_planar.py --settings settings_def.txt
 
 import argparse
 import time
@@ -224,7 +224,7 @@ if __name__ == '__main__':
     model = PPO(
         policy='MlpPolicy', 
         env=wrapped_env, 
-        learning_rate=custom_lr_schedule(initial_lr, final_lr),
+        learning_rate=6e-5,     #custom_lr_schedule(initial_lr, final_lr),
         n_steps=n_steps, 
         batch_size=batch_size,
         n_epochs=n_epochs, 
@@ -250,8 +250,8 @@ if __name__ == '__main__':
         tensorboard_log=logdir#Logging disabled for debugging, to enable : logdir
     )
     
-    Interval = 1000  # Checkpoint interval
-    total_timesteps = 2000 # One timestep specifies one impulse
+    Interval = 250000  # Checkpoint interval
+    total_timesteps = 1500000 # One timestep specifies one impulse
     iters = total_timesteps // Interval
 
     print("Planar Learning Commenced")

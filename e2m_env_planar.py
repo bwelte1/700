@@ -29,7 +29,7 @@ class Earth2MarsEnvPlanar(gym.Env):
     Class inputs:
         - N_NODES:           Number of trajectory segments
         - amu:              Gravitational constant of central body
-        - mission_time:     total mission time, years
+        - mission_time:     total mission time, days
         - v0:               initial velocity, km/s, list 
         - r0:               initial position, km, list
         - vT:               target velocity
@@ -86,8 +86,9 @@ class Earth2MarsEnvPlanar(gym.Env):
         self.isDone = False
         self.extra_info = {}
         # Timing
-        self.TIME_STEP = self.mission_time / self.N_NODES
-        #print(self.TIME_STEP)
+        #self.TIME_STEP = self.mission_time / self.N_NODES
+        self.TIME_STEP = None
+        # print(self.TIME_STEP)
         self.training_steps = 0
         
         """ ENVIRONMENT BOUNDARIES """
@@ -114,9 +115,9 @@ class Earth2MarsEnvPlanar(gym.Env):
         
         """ ACTION SPACE [yaw, pitch, radius]"""
         # Lower bounds
-        a_lb = np.array([-1., 0, -1.])
+        a_lb = np.array([-1., 0, -1., -1.])
         # Upper bounds
-        a_ub = np.array([1., 0, 1.])
+        a_ub = np.array([1., 0, 1., 1.])
 
         self.action_space = spaces.Box(a_lb, a_ub, dtype=np.float64)
 
@@ -125,16 +126,23 @@ class Earth2MarsEnvPlanar(gym.Env):
         # Update spacecraft state based on action
         # Compute reward based on new state
         # Return observation, reward, and done flag
-        
-        #Clips action
+
         action[1] = 0
+
+        assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
+        
+        if self.TIME_STEP is None:
+            # Convert the fourth action component to a TIME_STEP in the range [25, 65]
+            self.TIME_STEP = 55 + action[3] * 30
+            # Remove the TIME_STEP from the action (we only need the first 3 components for movement)
+            action = action[:3]
+
 
         #Manually set action
         #manual_action = [1, 1, 1]
 
 
         # Invalid action
-        assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         
         # State at next time step and current control
         r_next, v_next, m_next, dv = self.propagation_step(action)
@@ -178,8 +186,8 @@ class Earth2MarsEnvPlanar(gym.Env):
     
     def getReward(self, mass_next, action, dv):
         # reward = mass_next - self.m_current
-        print("DeltaV: " + str(dv))
-        print("Position: " + str(self.r_current))
+        # print("DeltaV: " + str(dv))
+        # print("Position: " + str(self.r_current))
         # print("Initial Mass: " + str(self.m_current) + " Final Mass: " + str(mass_next))
         # print("Mass Change: " + str(reward))
         reward = 0
@@ -210,6 +218,7 @@ class Earth2MarsEnvPlanar(gym.Env):
         dv = [0, 0, 0]
         if (self.N_NODES-1) > self.training_steps:
             if (self.using_reachability == 1):   
+                #print("Time Step = " + str(self.TIME_STEP))
                 state0 = np.concatenate((self.r_current, self.v_current))
                 statef = np.concatenate((r_centre, v_centre))
                 #print("Yaw: " + str(action[0]) + " Pitch: " + str(action[1]) + " Radius: " + str(action[2]))
@@ -354,6 +363,7 @@ class Earth2MarsEnvPlanar(gym.Env):
         
         
     def reset(self, seed=None, options=None):
+        self.TIME_STEP = None
         self.r_current = self.r0
         self.v_current = self.v0
         self.m_current = self.m0

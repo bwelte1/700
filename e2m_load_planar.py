@@ -1,5 +1,5 @@
 # Example Run:
-# python e2m_load.py --settings settings_def.txt --model_dir saved_models/PPO/Model_27/3000000 --episodes 1
+# python e2m_load_planar.py --settings settings_def.txt --model_dir saved_models/PPO/Model_38/2000 --episodes 1
 
 import os
 import argparse
@@ -84,19 +84,20 @@ def upload_matlab(runlog, runlog_extra):
     # Save data to a MAT file in the specified directory
     scipy.io.savemat(os.path.join(directory, 'data.mat'), data)
 
-def plot_traj_kepler(plot_data, model_path, ellipsoid_points):
+def plot_traj_kepler(plot_data, model_path, ellipsoid_points, TIME_STEP):
     positions = [state[:3] for state in plot_data]
     velocities = [state[3:6] for state in plot_data]
 
     fig1 = plt.figure()
     ax = fig1.add_subplot(111, projection='3d')
+    print("Plot Timestep = " + str(TIME_STEP))
 
     for ii in range(len(positions)):
         #print(positions[ii])
         pk.orbit_plots.plot_kepler(
             r0=positions[ii],            # Initial position (3D)
             v0=velocities[ii],           # Initial velocity (3D)
-            tof=(tof / N_NODES) * DAY2SEC, # Time of flight (seconds)
+            tof= TIME_STEP * DAY2SEC,    # Time of flight (seconds)
             mu=amu,                      # Gravitational parameter
             color='b',                   # Color of the orbit
             label=None,                  # Optional label
@@ -211,7 +212,8 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
         ellipsoid_points = [log['semiAxes'] for log in extra_info_logs]
         # print("Ellipsoid Points: " + str(ellipsoid_points))
         plotting_data = [log['Plotting'] for log in extra_info_logs]
-        plot_traj_kepler(plotting_data, model_path, ellipsoid_points)
+        TIME_STEP = obs[7] / N_NODES
+        plot_traj_kepler(plotting_data, model_path, ellipsoid_points, TIME_STEP)
         
 
         if num_episodes != 1:
