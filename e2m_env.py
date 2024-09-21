@@ -135,7 +135,7 @@ class Earth2MarsEnv(gym.Env):
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         
         # State at next time step and current control
-        r_next, v_next, m_next, dv = self.propagation_step(manual_action)
+        r_next, v_next, m_next, dv = self.propagation_step(action)
         #r_next, v_next, m_next, dv = self.propagation_step(action)
             
         # Info (state at the beginning of the segment)
@@ -157,8 +157,8 @@ class Earth2MarsEnv(gym.Env):
         self.r_current = r_next
         self.v_current = v_next
         
-        print("DV: " + str(dv))
-        print("Norm DV: " + str(norm(dv)))
+        # print("DV: " + str(dv))
+        # print("Norm DV: " + str(norm(dv)))
         reward = self.getReward(m_next, action, dv)
 
         self.m_current = m_next
@@ -298,8 +298,8 @@ class Earth2MarsEnv(gym.Env):
                 #print("Next Position: " + str(r_next))
 
                 #Finds velocity at next stage using lambert and produces dv
-                print(r_next)
-                print(self.r_current)
+                # print(r_next)
+                # print(self.r_current)
                 final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 v_r1 = final_step_lambert.get_v1()[0]
                 v_next = final_step_lambert.get_v2()[0]
@@ -404,7 +404,7 @@ class Earth2MarsEnv(gym.Env):
         return axes_sorted
 
     def action2pos(self, axes, action, r_centre):
-        print("Action: " + str(action))
+        # print("Action: " + str(action))
         
         #Denormalising angles
         yaw = action[0] * np.pi                 # [-π to π]
@@ -426,13 +426,13 @@ class Earth2MarsEnv(gym.Env):
         #Align with ellipsoid
         aligned_point = axes @ points
         aligned_point = np.reshape(aligned_point,(1,3))
-        print(aligned_point)
+        # print(aligned_point)
 
         #Translate to centre
-        print("TP:")
+        # print("TP:")
        
         translated_point = aligned_point + r_centre
-        print(translated_point)
+        # print(translated_point)
 
         translated_point = np.squeeze(translated_point)
         
