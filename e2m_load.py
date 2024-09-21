@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from stable_baselines3 import PPO
 from e2m_env import Earth2MarsEnv
+from e2v_env import Earth2VenusEnv
 import scipy.io
 import numpy as np
 from numpy.linalg import norm
@@ -27,7 +28,7 @@ def plot_run(positions, r0, rT):
     ax.plot(x_coords, y_coords, z_coords, c='b', marker='o')
     ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100)  # Sun at origin
     ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50)  # Earth
-    ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Mars
+    ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Target Planet
 
     ax.set_xlabel('X Position (km)')
     ax.set_ylabel('Y Position (km)')
@@ -105,7 +106,7 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points):
     ax.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
     ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100, label="Sun")  # Sun at origin
     ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50, label="Earth")  # Earth
-    ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50, label="Mars")   # Mars
+    ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50, label="Mars")   # Target Planet
 
     ax.set_xlabel('X Position (km)')
     ax.set_ylabel('Y Position (km)')
@@ -138,7 +139,10 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points):
     interval_number = os.path.basename(model_path)   # model name
     plot_folder = os.path.join(os.getcwd(), 'Plots', last_directory)    # plot folder for model
     plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')  
-    # fig1.savefig(plot_name_png)
+    # Check if the plot folder exists, and create it if not
+    if not os.path.exists(plot_folder):
+        os.makedirs(plot_folder)
+    fig1.savefig(plot_name_png)
 
     plt.show()
 
@@ -280,6 +284,8 @@ if __name__ == '__main__':
     Isp = float(Isp)                # specific impulse of engine 
     using_reachability = bool(int(using_reachability))
     tof = float(tof)      # predetermined TOF
+    planet = str(Planet)
+    planet = planet.lower()
     
     amu = MU_SUN / 1e9              # km^3/s^2, Gravitational constant of the central body
     rconv = 149600000.              # position, km (sun-earth)
@@ -287,14 +293,14 @@ if __name__ == '__main__':
     v_ejection = (pk.G0/1000.*Isp)  # propellant ejection velocity
 
     # Example initial conditions
-    r0 = (-140699693.0, -51614428.0, 980.0)  # Earth position
-    rT = (-172682023.0, 176959469.0, 7948912.0)  # Mars position
-
-    # Physical constants
+    r0 = (-140699693.0, -51614428.0, 980.0)
     v0 = (9.774596, -28.07828, 4.337725e-4)
-    vT = (-16.427384, -14.860506, 9.21486e-2)
 
-    env = Earth2MarsEnv(
+    if planet == 'mars':
+        #Same init conds as Zavoli Federici Table 1 (km and km/s)
+        rT = (-172682023.0, 176959469.0, 7948912.0)
+        vT = (-16.427384, -14.860506, 9.21486e-2)
+        env = Earth2MarsEnv(
         N_NODES=N_NODES, 
         amu=amu, 
         v0=v0, 
@@ -303,10 +309,28 @@ if __name__ == '__main__':
         rT=rT, 
         m0=m0, 
         max_thrust=Tmax,
-        v_ejection=v_ejection,   #arbitrary
+        v_ejection=v_ejection,
         mission_time=tof,
         using_reachability=using_reachability
-    )
+        )
+    elif planet == 'venus':
+        #Same init conds as Zavoli Federici Table 1 (km and km/s)
+        rT = (108210000, 0.0, 0.0)  # halfway between aphelion and perihelion in x direction, 0 in y and z. taken from NASA
+        vT = (0, 35.02, 0)          # mean velocity in +y direction (perpendicular to distance in +x direction)
+        env = Earth2VenusEnv(
+        N_NODES=N_NODES, 
+        amu=amu, 
+        v0=v0, 
+        r0=r0, 
+        vT=vT, 
+        rT=rT, 
+        m0=m0, 
+        max_thrust=Tmax,
+        v_ejection=v_ejection,
+        mission_time=tof,
+        using_reachability=using_reachability
+        )
+
 
     load_and_run_model(model_path=args.model_dir, env=env, num_episodes=args.episodes, rI=r0, rT=rT, tof=tof, amu=amu, num_nodes=N_NODES)
-    display_plots()
+    # display_plots()
