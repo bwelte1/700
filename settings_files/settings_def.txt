@@ -26,3 +26,4 @@ tof                         500
 m_initial                   1000
 using_reachability          1
 Isp                         2000
+Planet                      Mars
