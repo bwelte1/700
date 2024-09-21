@@ -24,6 +24,7 @@ from pykep.core import epoch, lambert_problem
 from pykep import MU_SUN, G0
 
 from e2m_env import Earth2MarsEnv
+from e2v_env import Earth2VenusEnv
 from e2m_load import load_and_run_model
 
 def plotRun(state_logs,r0,rT):
@@ -101,6 +102,8 @@ if __name__ == '__main__':
     verbose = bool(int(verbose))
     _init_setup_model = bool(int(_init_setup_model))
     m0 = float(m_initial)
+    planet = str(Planet)
+    planet = planet.lower()
     
     # Physical constants
     amu = MU_SUN / 1e9              # km^3/s^2, Gravitational constant of the central body
@@ -112,31 +115,26 @@ if __name__ == '__main__':
     Isp = float(Isp)                # specific impulse of engine 
     # v_ejection = 100
     v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658 if Isp = 2000
+    
     ## INITIAL CONDITIONS ##
-    # planet models
-    earth = jpl_lp('earth')
-    mars = jpl_lp('mars')
     
     # Timing
     start_date_julian = int(start_date_julian)  # departure date from earth
     departure_date_e = epoch(start_date_julian)
-    tof = int(tof)      # predetermined TOF
+    tof = float(tof)      # predetermined TOF
     arrival_date_e = epoch(tof+start_date_julian)
-
-    #Same init conds as Zavoli Federici Table 1 (km and km/s)
     r0 = (-140699693.0, -51614428.0, 980.0)
     v0 = (9.774596, -28.07828, 4.337725e-4)
-    rT = (-172682023.0, 176959469.0, 7948912.0)
-    vT = (-16.427384, -14.860506, 9.21486e-2)
-    
+
+    using_reachability = bool(int(using_reachability))
     tof = int(tof)
 
-    #print([r0, v0, rT, vT, m0])
-    # Can do lambert from earth to mars and get v1 and v2
-    
-    using_reachability = bool(int(using_reachability))
-    
-    env = Earth2MarsEnv(
+    if planet == 'mars':
+        #Same init conds as Zavoli Federici Table 1 (km and km/s)
+        rT = (-172682023.0, 176959469.0, 7948912.0)
+        vT = (-16.427384, -14.860506, 9.21486e-2)
+        
+        env = Earth2MarsEnv(
         N_NODES=N_NODES, 
         amu=amu, 
         v0=v0, 
@@ -148,7 +146,25 @@ if __name__ == '__main__':
         v_ejection=v_ejection,
         mission_time=tof,
         using_reachability=using_reachability
-    )
+        )
+    elif planet == 'venus':
+        #Same init conds as Zavoli Federici Table 1 (km and km/s)
+        rT = (108210000, 0.0, 0.0)  # halfway between aphelion and perihelion in x direction, 0 in y and z. taken from NASA
+        vT = (0, 35.02, 0)          # mean velocity in +y direction (perpendicular to distance in +x direction)
+        
+        env = Earth2VenusEnv(
+        N_NODES=N_NODES, 
+        amu=amu, 
+        v0=v0, 
+        r0=r0, 
+        vT=vT, 
+        rT=rT, 
+        m0=m0, 
+        max_thrust=Tmax,
+        v_ejection=v_ejection,
+        mission_time=tof,
+        using_reachability=using_reachability
+        )
     
     class envLoggingWrapper(gym.Wrapper):
         def __init__(self, env):
