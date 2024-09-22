@@ -206,8 +206,8 @@ if __name__ == '__main__':
         next_run = get_next_run_number(models_dir)
 
         # Set up the directories for the current run
-        models_dir = f"{models_dir}/Model_{next_run}"
-        logdir = f"{log_base_dir}/Model_{next_run}"
+        models_dir = f"{models_dir}/Planar_Model_{next_run}"
+        logdir = f"{log_base_dir}/Planar_Model_{next_run}"
 
         # Create directories for the current run if they don't exist
         if not os.path.exists(models_dir):
@@ -224,7 +224,7 @@ if __name__ == '__main__':
     model = PPO(
         policy='MlpPolicy', 
         env=wrapped_env, 
-        learning_rate=6e-5,     #custom_lr_schedule(initial_lr, final_lr),
+        learning_rate=final_lr,     #custom_lr_schedule(initial_lr, final_lr),
         n_steps=n_steps, 
         batch_size=batch_size,
         n_epochs=n_epochs, 

@@ -242,7 +242,7 @@ if __name__ == '__main__':
     model = PPO(
         policy='MlpPolicy', 
         env=wrapped_env, 
-        learning_rate=custom_lr_schedule(initial_lr, final_lr),
+        learning_rate=final_lr, #custom_lr_schedule(initial_lr, final_lr),
         n_steps=n_steps, 
         batch_size=batch_size,
         n_epochs=n_epochs, 
