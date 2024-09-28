@@ -1,7 +1,7 @@
 load_model                  1
 env_name                    e2m_env
 mission_name                Earth_Mars
-N_NODES                     10
+N_NODES                     7
 num_cpu                     8
 init_learning_rate          4.0e-5
 init_clip_range             0.2
@@ -27,3 +27,5 @@ m_initial                   1000
 using_reachability          1
 Isp                         2000
 Planet                      Mars
+initial_lr                  4.0e-5
+final_lr                    4.0e-6
