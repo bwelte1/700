@@ -88,10 +88,12 @@ def upload_matlab(runlog, runlog_extra):
 def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
     positions = [state[:3] for state in plot_data]
     velocities = [state[3:6] for state in plot_data]
-    print(velocities)
+    # print(velocities)
 
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111, projection='3d')
+    fig2 = plt.figure()
+    ax2 = fig2.add_subplot(111)
 
     for ii in range(len(positions)):
         #print(positions[ii])
@@ -105,6 +107,13 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
             axes=ax1                      # 3D axis for plotting
         )
         ax1.quiver(positions[ii][0], positions[ii][1], positions[ii][2], 30000000*dv_data[ii][0], 30000000*dv_data[ii][1], 30000000*dv_data[ii][2], arrow_length_ratio=0.2, color='red')
+        state_current = np.concatenate((positions[ii], velocities[ii]))
+        print(velocities[ii])
+        dv_rtn = np.transpose(YA.RotMat_RTN2Inertial(state_current)) @ dv_data[ii]
+        # print(dv_rtn)
+        ax2.stem(ii-0.2, dv_rtn[0], linefmt='Black', basefmt='White')
+        ax2.stem(ii, dv_rtn[1], linefmt='Red', basefmt='White')
+        ax2.stem(ii+0.2, dv_rtn[2], linefmt='Green', basefmt='White')
         
     x_coords, y_coords, z_coords = zip(*positions)
     ax1.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
@@ -116,6 +125,9 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
     ax1.set_ylabel('Y Position (km)')
     ax1.set_zlabel('Z Position (km)')
     ax1.set_title('Spacecraft Position Relative to the Sun')
+    ax2.set_xlabel('Impulse')
+    ax2.set_ylabel('dv (km/s)')
+    ax2.set_title('RTN Components of dv for each Impulse across the Trajectory')
 
     axes_scale = 2e8
     ax1.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
@@ -124,19 +136,20 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
     ax1.set_box_aspect([1,1,1])
 
     colours = ['red', 'black', 'green', 'orange', 'purple', 'cyan', 'gray']
-    for ellipsoid in ellipsoid_points:
-        for point in range(6):
-            ax1.scatter(ellipsoid[0,point], ellipsoid[1,point], ellipsoid[2,point], color=colours[point])
+    # for ellipsoid in ellipsoid_points:
+    #     for point in range(6):
+    #         ax1.scatter(ellipsoid[0,point], ellipsoid[1,point], ellipsoid[2,point], color=colours[point])
 
     ax1.view_init(elev=90, azim=-90)
     ax1.legend()
+    ax2.legend(['r (radial)', 't (transverse)', 'n (normal)'], loc='upper right')
 
     # colours = ['red', 'blue', 'green', 'orange', 'purple', 'cyan']
     # print(ellipsoid_points)
     # for ellipsoid in ellipsoid_points:
     #     # Plot each of the 6 points in the matrix, with distinct colors
     #     for point in range(6):
-    #         ax.scatter(ellipsoid[point, 0], ellipsoid[point, 1], ellipsoid[point, 2], color=colours[point])
+    #         ax1.scatter(ellipsoid[point, 0], ellipsoid[point, 1], ellipsoid[point, 2], color=colours[point])
     
     directory_path = os.path.dirname(args.model_dir)    # each interval zip file
     last_directory = os.path.basename(directory_path)   # model name
