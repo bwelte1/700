@@ -18,6 +18,8 @@ import pykep as pk
 from pykep import MU_SUN, DAY2SEC
 from pykep.core import lambert_problem
 
+import YA
+
 def plot_run(positions, r0, rT):
     positions.insert(0, [r0[0], r0[1], r0[2]])
     x_coords, y_coords, z_coords = zip(*positions)
@@ -83,12 +85,13 @@ def upload_matlab(runlog, runlog_extra):
     # Save data to a MAT file in the specified directory
     scipy.io.savemat(os.path.join(directory, 'data.mat'), data)
 
-def plot_traj_kepler(plot_data, model_path, ellipsoid_points):
+def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
     positions = [state[:3] for state in plot_data]
     velocities = [state[3:6] for state in plot_data]
+    print(velocities)
 
     fig1 = plt.figure()
-    ax = fig1.add_subplot(111, projection='3d')
+    ax1 = fig1.add_subplot(111, projection='3d')
 
     for ii in range(len(positions)):
         #print(positions[ii])
@@ -99,33 +102,34 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points):
             mu=amu,                      # Gravitational parameter
             color='b',                   # Color of the orbit
             label=None,                  # Optional label
-            axes=ax                      # 3D axis for plotting
+            axes=ax1                      # 3D axis for plotting
         )
-
+        ax1.quiver(positions[ii][0], positions[ii][1], positions[ii][2], 30000000*dv_data[ii][0], 30000000*dv_data[ii][1], 30000000*dv_data[ii][2], arrow_length_ratio=0.2, color='red')
+        
     x_coords, y_coords, z_coords = zip(*positions)
-    ax.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
-    ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100, label="Sun")  # Sun at origin
-    ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50, label="Earth")  # Earth
-    ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50, label="Mars")   # Target Planet
+    ax1.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
+    ax1.scatter([0], [0], [0], c='#FFA500', marker='o', s=100, label="Sun")  # Sun at origin
+    ax1.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50, label="Earth")  # Earth
+    ax1.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50, label="Mars")   # Target Planet
 
-    ax.set_xlabel('X Position (km)')
-    ax.set_ylabel('Y Position (km)')
-    ax.set_zlabel('Z Position (km)')
-    ax.set_title('Spacecraft Position Relative to the Sun')
+    ax1.set_xlabel('X Position (km)')
+    ax1.set_ylabel('Y Position (km)')
+    ax1.set_zlabel('Z Position (km)')
+    ax1.set_title('Spacecraft Position Relative to the Sun')
 
     axes_scale = 2e8
-    ax.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
-    ax.set_ylim([-axes_scale, axes_scale])  # Set Y-axis limit
-    ax.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
-    ax.set_box_aspect([1,1,1])
+    ax1.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
+    ax1.set_ylim([-axes_scale, axes_scale])  # Set Y-axis limit
+    ax1.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
+    ax1.set_box_aspect([1,1,1])
 
     colours = ['red', 'black', 'green', 'orange', 'purple', 'cyan', 'gray']
     for ellipsoid in ellipsoid_points:
-        for point in range(7):
-            ax.scatter(ellipsoid[0,point], ellipsoid[1,point], ellipsoid[2,point], color=colours[point])
+        for point in range(6):
+            ax1.scatter(ellipsoid[0,point], ellipsoid[1,point], ellipsoid[2,point], color=colours[point])
 
-    ax.view_init(elev=90, azim=-90)
-    ax.legend()
+    ax1.view_init(elev=90, azim=-90)
+    ax1.legend()
 
     # colours = ['red', 'blue', 'green', 'orange', 'purple', 'cyan']
     # print(ellipsoid_points)
@@ -213,7 +217,8 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
         ellipsoid_points = [log['semiAxes'] for log in extra_info_logs]
         # print("Ellipsoid Points: " + str(ellipsoid_points))
         plotting_data = [log['Plotting'] for log in extra_info_logs]
-        plot_traj_kepler(plotting_data, model_path, ellipsoid_points)
+        dv_data = [log['dv'] for log in extra_info_logs]
+        plot_traj_kepler(plotting_data, model_path, ellipsoid_points, dv_data)
         
 
         if num_episodes != 1:
