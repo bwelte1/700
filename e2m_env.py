@@ -231,7 +231,6 @@ class Earth2MarsEnv(gym.Env):
                 #Obtains HCI Frame STM
                 STM_HCI = M_RTN2ECI_f @ STM_RTN @ M_RTN2ECI_init_T
 
-
                 STM_SQUARED = np.transpose(STM_HCI @ STM_HCI)
 
                 eigvals, eigvecs = np.linalg.eig(STM_SQUARED)
@@ -301,6 +300,7 @@ class Earth2MarsEnv(gym.Env):
                 v_next = final_step_lambert.get_v2()[0]
                 #print(v_next)
                 dv = np.subtract(v_r1,self.v_current)
+                self.extra_info['dv'] = dv
                 self.plotting = np.concatenate((self.r_current, v_r1))
                 self.extra_info['Plotting'] = self.plotting.copy()
                 #print("Reachability DeltaV: " + str(dv))
