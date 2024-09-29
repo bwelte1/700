@@ -94,6 +94,7 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
     ax1 = fig1.add_subplot(111, projection='3d')
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
+    total_dv = 0
 
     for ii in range(len(positions)):
         #print(positions[ii])
@@ -108,13 +109,14 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
         )
         ax1.quiver(positions[ii][0], positions[ii][1], positions[ii][2], 30000000*dv_data[ii][0], 30000000*dv_data[ii][1], 30000000*dv_data[ii][2], arrow_length_ratio=0.2, color='red')
         state_current = np.concatenate((positions[ii], velocities[ii]))
-        print(velocities[ii])
+        # print(velocities[ii])
         dv_rtn = np.transpose(YA.RotMat_RTN2Inertial(state_current)) @ dv_data[ii]
-        # print(dv_rtn)
+        total_dv += norm(dv_rtn)
         ax2.stem(ii-0.2, dv_rtn[0], linefmt='Black', basefmt='White')
         ax2.stem(ii, dv_rtn[1], linefmt='Red', basefmt='White')
         ax2.stem(ii+0.2, dv_rtn[2], linefmt='Green', basefmt='White')
         
+    print(total_dv)
     x_coords, y_coords, z_coords = zip(*positions)
     ax1.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
     ax1.scatter([0], [0], [0], c='#FFA500', marker='o', s=100, label="Sun")  # Sun at origin
@@ -136,9 +138,9 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
     ax1.set_box_aspect([1,1,1])
 
     colours = ['red', 'black', 'green', 'orange', 'purple', 'cyan', 'gray']
-    # for ellipsoid in ellipsoid_points:
-    #     for point in range(6):
-    #         ax1.scatter(ellipsoid[0,point], ellipsoid[1,point], ellipsoid[2,point], color=colours[point])
+    for ellipsoid in ellipsoid_points:
+        for point in range(6):
+            ax1.scatter(ellipsoid[0,point], ellipsoid[1,point], ellipsoid[2,point], color=colours[point])
 
     ax1.view_init(elev=90, azim=-90)
     ax1.legend()
