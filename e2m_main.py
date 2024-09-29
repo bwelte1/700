@@ -269,14 +269,14 @@ if __name__ == '__main__':
     )
     
     Interval = 250000  # Checkpoint interval
-    total_timesteps = 1500000 # One timestep specifies one impulse
+    total_timesteps = 5500000 # One timestep specifies one impulse
     iters = total_timesteps // Interval
 
     print("Learning Commenced")
     for i in range(iters):
         model.learn(total_timesteps=Interval, reset_num_timesteps=False, tb_log_name="Data")
         model_path = f"{models_dir}/{Interval*(i+1)}"
-        if (i > (iters - 4)) or (i < 4) or (((i-1)*Interval)%250000==0):   # take first and last 4 models and every 500kth sim
+        if (i > (iters - 3)) or (i < 3) or (((i-1)*Interval)%500000==0):   # take first and last 4 models and every 500kth sim
             model.save(model_path)
             print(f"Model: {model_path}")
             print(f"Model saved at timestep {Interval*(i+1)}")            
