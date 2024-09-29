@@ -116,7 +116,7 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
         ax2.stem(ii, dv_rtn[1], linefmt='Red', basefmt='White')
         ax2.stem(ii+0.2, dv_rtn[2], linefmt='Green', basefmt='White')
         
-    print(total_dv)
+    print('Total dv: ' + str(total_dv))
     x_coords, y_coords, z_coords = zip(*positions)
     ax1.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
     ax1.scatter([0], [0], [0], c='#FFA500', marker='o', s=100, label="Sun")  # Sun at origin

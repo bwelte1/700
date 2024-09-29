@@ -152,7 +152,7 @@ class Earth2MarsEnv(gym.Env):
         info = self.sol
         
         # Update the spacecraft state
-        # print("Mass used: " + str(self.m_current) + " to " + str(m_next))
+        print("Mass available: " + str(self.m_current) + " to " + str(m_next))
         # print("Reward: " + str(reward))
         #print("")
 
