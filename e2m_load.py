@@ -144,7 +144,7 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
 
     ax1.view_init(elev=90, azim=-90)
     ax1.legend()
-    ax2.legend(['r (radial)', 't (transverse)', 'n (normal)'], loc='upper right')
+    ax2.legend(['Radial', 'Transverse', 'Normal'], loc='upper right')
 
     # colours = ['red', 'blue', 'green', 'orange', 'purple', 'cyan']
     # print(ellipsoid_points)
