@@ -183,11 +183,20 @@ class Earth2MarsEnv(gym.Env):
         # print("Mass Change: " + str(reward))
         reward = 0
         reward -= norm(dv) * 20
+        dva = abs(dv)
+        # print(dva)
+        
+        # if dv in z dir is too great
+        if isinstance(dva, list):
+            if dva[-1] > 0.5:
+                reward -= 40
+                reward -= 35*(dva[-1] - 0.5)
 
+        # added punishment for actions > 1
         for ii in range(len(action)):
             if abs(abs(action[ii]) > 1):
                 reward -= 25
-            reward -= 100*max(0, abs(action[ii]) - 1)   # added punishment for actions > 1
+            reward -= 100*max(0, abs(action[ii]) - 1)   
 
         # reward -= 0.05*((max(0, norm(dv) - self.max_thrust)) ** 2)  # added punishment for dv > dv_max
 
@@ -211,6 +220,7 @@ class Earth2MarsEnv(gym.Env):
             if (self.using_reachability == 1):   
                 state0 = np.concatenate((self.r_current, self.v_current))
                 statef = np.concatenate((r_centre, v_centre))
+                # print("Statef: {0}".format(statef))
                 #print("Yaw: " + str(action[0]) + " Pitch: " + str(action[1]) + " Radius: " + str(action[2]))
 
                 #Gets current STM
@@ -230,7 +240,6 @@ class Earth2MarsEnv(gym.Env):
 
                 #Obtains HCI Frame STM
                 STM_HCI = M_RTN2ECI_f @ STM_RTN @ M_RTN2ECI_init_T
-
 
                 STM_SQUARED = np.transpose(STM_HCI @ STM_HCI)
 
@@ -301,6 +310,7 @@ class Earth2MarsEnv(gym.Env):
                 v_next = final_step_lambert.get_v2()[0]
                 #print(v_next)
                 dv = np.subtract(v_r1,self.v_current)
+                self.extra_info['dv'] = dv
                 self.plotting = np.concatenate((self.r_current, v_r1))
                 self.extra_info['Plotting'] = self.plotting.copy()
                 #print("Reachability DeltaV: " + str(dv))
@@ -335,8 +345,8 @@ class Earth2MarsEnv(gym.Env):
             # print(self.vT)
             # print(lambert_v2)
             dv_equalization = np.subtract(array(self.vT), array(lambert_v2)) # velocity of mars - velocity at final step 
+            # print('dv Eq' + str(norm(dv_equalization)))
             m_next = self.Tsiolkovsky(array(dv_equalization))
-            # print(dv_equalization)
 
             self.m_current = carry_m
             
