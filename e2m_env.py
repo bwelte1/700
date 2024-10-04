@@ -129,16 +129,11 @@ class Earth2MarsEnv(gym.Env):
         #Clips action
         #action = np.clip(action, self.action_space.low, self.action_space.high)
 
-        #Manually set action
-        #manual_action = [1, 1, 1]
-
-
         # Invalid action
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         
         # State at next time step and current control
         r_next, v_next, m_next, dv = self.propagation_step(action)
-        #r_next, v_next, m_next, dv = self.propagation_step(action)
             
         # Info (state at the beginning of the segment)
         self.sol['rx'] = self.r_current[0]
@@ -154,7 +149,6 @@ class Earth2MarsEnv(gym.Env):
         # Update the spacecraft state
         # print("Mass available: " + str(self.m_current) + " to " + str(m_next))
         # print("Reward: " + str(reward))
-        #print("")
 
         self.r_current = r_next
         self.v_current = v_next
@@ -227,18 +221,16 @@ class Earth2MarsEnv(gym.Env):
                 STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 #Obtains useful STM Quadrant
                 STM_Current = STM_Current_Full[0:3, 3:6]
-                #print("Useful untransformed STM: " + str(STM_Current))
 
-                #Obtains RTN State Transition Matrix
-                #STM_RTN = np.dot(YA.DCM_LVLH2RTN(), STM_Current)
+                # Obtains State Transition Matrix in RTN Frame
                 STM_RTN = YA.DCM_LVLH2RTN() @ STM_Current @ np.transpose(YA.DCM_LVLH2RTN())
 
-                #Constructs Rotation Matrices
+                # Constructs Rotation Matrices for conversion into ECI / HCI
                 M_RTN2ECI_init = YA.RotMat_RTN2Inertial(state0)
                 M_RTN2ECI_init_T = np.transpose(YA.RotMat_RTN2Inertial(state0))
                 M_RTN2ECI_f = YA.RotMat_RTN2Inertial(statef)
 
-                #Obtains HCI Frame STM
+                # Obtains STM in HCI Frame
                 STM_HCI = M_RTN2ECI_f @ STM_RTN @ M_RTN2ECI_init_T
 
                 STM_SQUARED = np.transpose(STM_HCI @ STM_HCI)
@@ -256,17 +248,18 @@ class Earth2MarsEnv(gym.Env):
                 transverse = aligned[:,1]
                 normal = aligned[:,2]
 
+                # axes converted to RTN
                 radius_rtn = np.transpose(YA.RotMat_RTN2Inertial(statef)) @ radius
                 transverse_rtn = np.transpose(YA.RotMat_RTN2Inertial(statef)) @ transverse
                 normal_rtn = np.transpose(YA.RotMat_RTN2Inertial(statef)) @ normal
                 
+                # RTN reordered to TRN, made to be positive
                 RS_axes_ordered = np.zeros((3, 3))
-
-                # Ordered TRN
                 RS_axes_ordered[:, 0] = radius * np.sign(radius_rtn[1])
                 RS_axes_ordered[:, 1] = transverse * np.sign(transverse_rtn[0])
                 RS_axes_ordered[:, 2] = normal * np.sign(normal_rtn[2])
 
+                # Find optimal coordinate within ellipsoid
                 r_next = self.action2pos(RS_axes_ordered, action, r_centre)
                 
                 p = np.zeros((3,7))
@@ -334,16 +327,8 @@ class Earth2MarsEnv(gym.Env):
             self.plotting = np.concatenate((self.r_current, lambert_v1))
             self.extra_info['Plotting'] = self.plotting.copy()
 
-            # print("First")
-            # print(self.v_current)
-            # print(lambert_v1)
-            # print(dv_N_minus_1)
-
             # Equalization with mars (step N)
             lambert_v2 = final_step_lambert.get_v2()[0]
-            # print("First")
-            # print(self.vT)
-            # print(lambert_v2)
             dv_equalization = np.subtract(array(self.vT), array(lambert_v2)) # velocity of mars - velocity at final step 
             # print('dv Eq' + str(norm(dv_equalization)))
             m_next = self.Tsiolkovsky(array(dv_equalization))
@@ -354,7 +339,7 @@ class Earth2MarsEnv(gym.Env):
             v_next = self.vT
             
             self.isDone = True  
-
+            self.extra_info['final_mass'] = m_next
             #Scalar Dv still works for Tsiolkovsky
             dv = norm(dv_N_minus_1) + norm(dv_equalization)
         
