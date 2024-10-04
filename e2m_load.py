@@ -54,8 +54,7 @@ class EnvLoggingWrapper(gym.Wrapper):
         return observation, reward, done, truncated, info
 
     def reset(self, **kwargs):
-        self.info_logs = []
-        self.state_logs = []
+        self.clear_logs()
         observation, info = self.env.reset(**kwargs)
         return observation
 
@@ -68,6 +67,11 @@ class EnvLoggingWrapper(gym.Wrapper):
     def get_extra_info_logs(self):
         return self.extra_info_logs
     
+    def clear_logs(self):
+        self.state_logs = []  # Reset state logs
+        self.extra_info_logs = []  # Reset any extra info logs, including impulse tracking
+        self.info_logs = []
+
 def upload_matlab(runlog, runlog_extra):
     #semiAxes_values = [info['semiAxes'] for info in runlog_extra if 'semiAxes' in info]
     #print(f"semiAxes values for episode {episode + 1}: {semiAxes_values}")
@@ -103,7 +107,7 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
             v0=velocities[ii],           # Initial velocity (3D)
             tof=(tof / N_NODES) * DAY2SEC, # Time of flight (seconds)
             mu=amu,                      # Gravitational parameter
-            color='b',                   # Color of the orbit
+            color='black',                   # Color of the orbit
             label=None,                  # Optional label
             axes=ax1                      # 3D axis for plotting
         )
@@ -118,7 +122,7 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
         
     # print('Total dv: ' + str(total_dv))
     x_coords, y_coords, z_coords = zip(*positions)
-    ax1.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
+    # ax1.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
     ax1.scatter([0], [0], [0], c='#FFA500', marker='o', s=100, label="Sun")  # Sun at origin
     ax1.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50, label="Earth")  # Earth
     ax1.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50, label="Mars")   # Target Planet
@@ -138,32 +142,28 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
     ax1.set_box_aspect([1,1,1])
 
     colours = ['red', 'black', 'green', 'orange', 'purple', 'cyan', 'gray']
-    for ellipsoid in ellipsoid_points:
-        for point in range(6):
-            ax1.scatter(ellipsoid[0,point], ellipsoid[1,point], ellipsoid[2,point], color=colours[point])
+    # for ellipsoid in ellipsoid_points:
+    #     for point in range(6):
+    #         ax1.scatter(ellipsoid[0,point], ellipsoid[1,point], ellipsoid[2,point], color=colours[point])
 
     ax1.view_init(elev=90, azim=-90)
     ax1.legend()
     ax2.legend(['Radial', 'Transverse', 'Normal'], loc='upper right')
 
-    # colours = ['red', 'blue', 'green', 'orange', 'purple', 'cyan']
-    # print(ellipsoid_points)
-    # for ellipsoid in ellipsoid_points:
-    #     # Plot each of the 6 points in the matrix, with distinct colors
-    #     for point in range(6):
-    #         ax1.scatter(ellipsoid[point, 0], ellipsoid[point, 1], ellipsoid[point, 2], color=colours[point])
-    
     directory_path = os.path.dirname(args.model_dir)    # each interval zip file
     last_directory = os.path.basename(directory_path)   # model name
     interval_number = os.path.basename(model_path)   # model name
     plot_folder = os.path.join(os.getcwd(), 'Plots', last_directory)    # plot folder for model
     plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')  
-    # Check if the plot folder exists, and create it if not
-    if not os.path.exists(plot_folder):
+    if not os.path.exists(plot_folder):     # Check if the plot folder exists, and create it if not
         os.makedirs(plot_folder)
     fig1.savefig(plot_name_png)
 
-    plt.show()
+    return {
+        'total_dv': total_dv
+    }
+    
+    # plt.show()
 
 def plot_ellipsoid(ellipsoid, ax):
 
@@ -183,82 +183,43 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
 
     model1 = PPO.load(model_file_path)
     wrapped_env = EnvLoggingWrapper(env)
+    
+    episode_data_list = []
+    total_mass = 0
 
     for episode in range(num_episodes):
-        # fig1 = plt.figure()
-        # ax = fig1.add_subplot(111, projection='3d')  # Create 3D axes
         obs = wrapped_env.reset()
         r_prev = obs[:3]
         v_prev = obs[3:6]
         done = False
+        
         while not done:
-            # print(f"Analysis of next arc")
-            # Plot Lambert
             action, _states = model1.predict(obs)
             obs, reward, done, truncated, info = wrapped_env.step(action)
-
-            # r_new = obs[:3]
-            # print(f"v_prev: {v_prev}")
-            # l = lambert_problem(r1=r_prev, r2=r_new, tof=((tof/N_NODES)*DAY2SEC), mu=amu, max_revs=0) 
-            # r_prev = r_new
-            # v_new = l.get_v1()[0]
-            # print(f"v_new: {v_new}")
-            # dv = np.subtract(v_new, v_prev)
-            # print(f"dv: {dv}")
-            # print(f"norm: {norm(dv)}")
-            # print(obs[6])
-            # v_prev = obs[3:6]
-            # pk.orbit_plots.plot_lambert(l, axes=ax)
-            # ax.scatter(r_new[0], r_new[1], r_new[2], c='k', marker='o', s=10) 
-            
-            # Plot Kepler
-            # v_current = obs[3:6]
-            # print(f"velocity at end of previous arc: {v_current}")
-            # action, _states = model1.predict(obs)
-            # obs, reward, done, truncated, info = wrapped_env.step(action)
-            # dv = obs[8:11] # dv now omitted from observation
-            # new_v = v_current + dv
-            # print(f"dv required to enter current arc from previous arc: {dv}")
-            # print(f"velocity at start of current arc: {new_v}")
-            # pk.orbit_plots.plot_kepler(r0 = np.array(obs[:3]), v0 = np.array(new_v), tof=(tof/num_nodes)*DAY2SEC, mu=amu, axes=ax)
-            
-            # # Save the figure for each iteration
-            # iteration += 1
-            # fig1.savefig(f'./Plots/loadrunfig_iteration_{iteration}.png')
         
         extra_info_logs = wrapped_env.get_extra_info_logs()
         run_log = wrapped_env.get_state_logs()
 
         ellipsoid_points = [log['semiAxes'] for log in extra_info_logs]
-        # print("Ellipsoid Points: " + str(ellipsoid_points))
-        plotting_data = [log['Plotting'] for log in extra_info_logs]
-        dv_data = [log['dv'] for log in extra_info_logs]
-        plot_traj_kepler(plotting_data, model_path, ellipsoid_points, dv_data)
         
+        dv_data = [log['dv'] for log in extra_info_logs]
+        
+        plotting_data = [log['Plotting'] for log in extra_info_logs]
+        mass_data = [log.get('final_mass', 0) for log in extra_info_logs]    
+        total_mass += mass_data[-1]
+                
+        episode_data = plot_traj_kepler(plotting_data, model_path, ellipsoid_points, dv_data)
+        episode_data_list.append(episode_data)
 
         if num_episodes != 1:
             print(f"Episode {episode + 1} finished.")
-        # positions = [state[:3] for state in run_log]
-        # plot_run(positions, rI, rT)
-        # positions_alt = [info['state_alt'] for info in extra_info_logs if 'state_alt' in info]
-        # sun = np.concatenate((rT, vT))
-        # positions_alt.append(sun)
-        # plot_run(positions_alt, r0, rT)
-        
-        # ax.set_title("Combined Trajectory of All Episodes")
-        # ax.set_xlabel("x")
-        # ax.set_ylabel("y")
-        # ax.set_zlabel("z")
-        # ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100)  # Sun at origin
-        # ax.scatter(rI[0], rI[1], rI[2], c='b', marker='o', s=50)  # Earth
-        # ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Mars
-        # # set axis limits to ensure all axes are on the same scale
-        # axes_scale = 2e8
-        # ax.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
-        # ax.set_ylim([-axes_scale, axes_scale])  # Set Y-axis limit
-        # ax.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
-        # ax.set_box_aspect([1,1,1])
-    
+
+    total_dv_sum = sum([data['total_dv'] for data in episode_data_list])
+    mean_dv = total_dv_sum / num_episodes
+    mean_mass = total_mass / num_episodes
+    print(f'Mean dv across {num_episodes} episodes: {mean_dv}')
+    print(f'Mean final mass across {num_episodes} episodes: {mean_mass}')
+
         
 def display_plots():
     directory_path = os.path.dirname(args.model_dir)    # each interval zip file
