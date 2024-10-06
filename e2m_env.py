@@ -233,7 +233,7 @@ class Earth2MarsEnv(gym.Env):
                 # Obtains STM in HCI Frame
                 STM_HCI = M_RTN2ECI_f @ STM_RTN @ M_RTN2ECI_init_T
 
-                STM_SQUARED = np.transpose(STM_HCI @ STM_HCI)
+                STM_SQUARED = np.transpose(STM_HCI) @ STM_HCI
 
                 eigvals, eigvecs = np.linalg.eig(STM_SQUARED)
 
