@@ -35,7 +35,7 @@ def plot_run(positions, r0, rT):
     ax.set_xlabel('X Position (km)')
     ax.set_ylabel('Y Position (km)')
     ax.set_zlabel('Z Position (km)')
-    ax.set_title('Spacecraft Position Relative to the Sun')
+    # ax.set_title('Spacecraft Position Relative to the Sun')
 
     # plt.show()
 
@@ -130,10 +130,10 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
     ax1.set_xlabel('X Position (km)')
     ax1.set_ylabel('Y Position (km)')
     ax1.set_zlabel('Z Position (km)')
-    ax1.set_title('Spacecraft Position Relative to the Sun')
+    # ax1.set_title('Spacecraft Position Relative to the Sun')
     ax2.set_xlabel('Impulse')
     ax2.set_ylabel('dv (km/s)')
-    ax2.set_title('RTN Components of dv for each Impulse across the Trajectory')
+    # ax2.set_title('RTN Components of dv for each Impulse across the Trajectory')
 
     axes_scale = 2e8
     ax1.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
@@ -155,15 +155,21 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
     interval_number = os.path.basename(model_path)   # model name
     plot_folder = os.path.join(os.getcwd(), 'Plots', last_directory)    # plot folder for model
     plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')  
+    stem_name_png = os.path.join(plot_folder, f'stem_interval_{interval_number}.png')  
     if not os.path.exists(plot_folder):     # Check if the plot folder exists, and create it if not
         os.makedirs(plot_folder)
     fig1.savefig(plot_name_png)
+    fig2.savefig(stem_name_png)
 
+    plt.show()
+    # plt.close()
+    # plt.close()
+    
     return {
         'total_dv': total_dv
     }
     
-    # plt.show()
+    
 
 def plot_ellipsoid(ellipsoid, ax):
 
@@ -185,7 +191,7 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
     wrapped_env = EnvLoggingWrapper(env)
     
     episode_data_list = []
-    total_mass = 0
+    total_mass_array = []
 
     for episode in range(num_episodes):
         obs = wrapped_env.reset()
@@ -206,19 +212,26 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
         
         plotting_data = [log['Plotting'] for log in extra_info_logs]
         mass_data = [log.get('final_mass', 0) for log in extra_info_logs]    
-        total_mass += mass_data[-1]
+        total_mass_array.append(mass_data[-1])
                 
         episode_data = plot_traj_kepler(plotting_data, model_path, ellipsoid_points, dv_data)
         episode_data_list.append(episode_data)
 
-        if num_episodes != 1:
-            print(f"Episode {episode + 1} finished.")
+        # if num_episodes != 1:
+            # print(f"Episode {episode + 1} finished.")
 
-    total_dv_sum = sum([data['total_dv'] for data in episode_data_list])
-    mean_dv = total_dv_sum / num_episodes
-    mean_mass = total_mass / num_episodes
-    print(f'Mean dv across {num_episodes} episodes: {mean_dv}')
-    print(f'Mean final mass across {num_episodes} episodes: {mean_mass}')
+    mean_mass = np.mean(total_mass_array)
+    mean_dv = np.mean([data['total_dv'] for data in episode_data_list])
+    dv_std = np.std([data['total_dv'] for data in episode_data_list])
+    mass_std = np.std(total_mass_array)
+    print(f'Mean dv across {num_episodes} episodes: {mean_dv}, with std {dv_std}')
+    print(f'Mean final mass across {num_episodes} episodes: {mean_mass}, with std {mass_std}')
+    boxFig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+    ax1.boxplot(total_mass_array)
+    ax1.set_title("Remaining Mass")
+    ax2.boxplot([data['total_dv'] for data in episode_data_list])
+    ax2.set_title("Total ∆v")
+    plt.show()
 
         
 def display_plots():
