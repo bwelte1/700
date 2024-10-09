@@ -6,6 +6,7 @@ import argparse
 import gymnasium as gym
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.ticker import MaxNLocator
 from stable_baselines3 import PPO
 from e2m_env import Earth2MarsEnv
 from e2v_env import Earth2VenusEnv
@@ -32,9 +33,9 @@ def plot_run(positions, r0, rT):
     ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50)  # Earth
     ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Target Planet
 
-    ax.set_xlabel('X Position (km)')
-    ax.set_ylabel('Y Position (km)')
-    ax.set_zlabel('Z Position (km)')
+    ax.set_xlabel('X Position (km e8)')
+    ax.set_ylabel('Y Position (km e8)')
+    ax.set_zlabel('Z Position (km e8)')
     # ax.set_title('Spacecraft Position Relative to the Sun')
 
     # plt.show()
@@ -111,14 +112,19 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
             label=None,                  # Optional label
             axes=ax1                      # 3D axis for plotting
         )
-        ax1.quiver(positions[ii][0], positions[ii][1], positions[ii][2], 30000000*dv_data[ii][0], 30000000*dv_data[ii][1], 30000000*dv_data[ii][2], arrow_length_ratio=0.2, color='red')
-        state_current = np.concatenate((positions[ii], velocities[ii]))
-        # print(velocities[ii])
-        dv_rtn = np.transpose(YA.RotMat_RTN2Inertial(state_current)) @ dv_data[ii]
-        total_dv += norm(dv_rtn)
-        ax2.stem(ii-0.2, dv_rtn[0], linefmt='Black', basefmt='White')
-        ax2.stem(ii, dv_rtn[1], linefmt='Red', basefmt='White')
-        ax2.stem(ii+0.2, dv_rtn[2], linefmt='Green', basefmt='White')
+        if isinstance(dv_data[ii], np.ndarray):
+            ax1.quiver(positions[ii][0], positions[ii][1], positions[ii][2], 30000000*dv_data[ii][0], 30000000*dv_data[ii][1], 30000000*dv_data[ii][2], arrow_length_ratio=0.2, color='red')
+            state_current = np.concatenate((positions[ii], velocities[ii]))
+            # print(velocities[ii])
+            # print(dv_data[ii])
+            dv_rtn = np.transpose(YA.RotMat_RTN2Inertial(state_current)) @ dv_data[ii]
+            total_dv += norm(dv_rtn)
+            ax2.stem(ii-0.2, dv_rtn[0], linefmt='Black', basefmt='White')
+            ax2.stem(ii, dv_rtn[1], linefmt='Red', basefmt='White')
+            ax2.stem(ii+0.2, dv_rtn[2], linefmt='Green', basefmt='White')
+            ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
+        else:
+            total_dv += dv_data[ii]
         
     # print('Total dv: ' + str(total_dv))
     x_coords, y_coords, z_coords = zip(*positions)
@@ -127,9 +133,9 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
     ax1.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50, label="Earth")  # Earth
     ax1.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50, label="Mars")   # Target Planet
 
-    ax1.set_xlabel('X Position (km)')
-    ax1.set_ylabel('Y Position (km)')
-    ax1.set_zlabel('Z Position (km)')
+    ax1.set_xlabel('X Position (km e8)')
+    ax1.set_ylabel('Y Position (km e8)')
+    ax1.set_zlabel('Z Position (km e8)')
     # ax1.set_title('Spacecraft Position Relative to the Sun')
     ax2.set_xlabel('Impulse')
     ax2.set_ylabel('dv (km/s)')

@@ -303,7 +303,6 @@ class Earth2MarsEnv(gym.Env):
                 v_next = final_step_lambert.get_v2()[0]
                 #print(v_next)
                 dv = np.subtract(v_r1,self.v_current)
-                self.extra_info['dv'] = dv
                 self.plotting = np.concatenate((self.r_current, v_r1))
                 self.extra_info['Plotting'] = self.plotting.copy()
                 #print("Reachability DeltaV: " + str(dv))
@@ -343,6 +342,7 @@ class Earth2MarsEnv(gym.Env):
             #Scalar Dv still works for Tsiolkovsky
             dv = norm(dv_N_minus_1) + norm(dv_equalization)
         
+        self.extra_info['dv'] = dv
         return r_next, v_next, m_next, dv
     
         
