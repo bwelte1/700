@@ -321,6 +321,7 @@ class Earth2MarsEnv(gym.Env):
             final_step_lambert = lambert_problem(r1=self.r_current, r2=self.rT, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
             lambert_v1 = final_step_lambert.get_v1()[0]
             dv_N_minus_1 = array(lambert_v1) - array(self.v_current)
+            self.extra_info['dv_n_minus_1'] = dv_N_minus_1
             carry_m = self.m_current
             self.m_current = self.Tsiolkovsky(array(dv_N_minus_1))
             self.plotting = np.concatenate((self.r_current, lambert_v1))

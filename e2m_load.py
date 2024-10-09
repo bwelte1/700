@@ -90,7 +90,7 @@ def upload_matlab(runlog, runlog_extra):
     # Save data to a MAT file in the specified directory
     scipy.io.savemat(os.path.join(directory, 'data.mat'), data)
 
-def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
+def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_info_logs):
     positions = [state[:3] for state in plot_data]
     velocities = [state[3:6] for state in plot_data]
     # print(velocities)
@@ -119,12 +119,22 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data):
             # print(dv_data[ii])
             dv_rtn = np.transpose(YA.RotMat_RTN2Inertial(state_current)) @ dv_data[ii]
             total_dv += norm(dv_rtn)
-            ax2.stem(ii-0.2, dv_rtn[0], linefmt='Black', basefmt='White')
-            ax2.stem(ii, dv_rtn[1], linefmt='Red', basefmt='White')
-            ax2.stem(ii+0.2, dv_rtn[2], linefmt='Green', basefmt='White')
+            ax2.stem(ii+1-0.2, dv_rtn[0], linefmt='Black', basefmt='White')
+            ax2.stem(ii+1, dv_rtn[1], linefmt='Red', basefmt='White')
+            ax2.stem(ii+1+0.2, dv_rtn[2], linefmt='Green', basefmt='White')
             ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
         else:
-            total_dv += dv_data[ii]
+            dv_n_minus_1 = [log.get('dv_n_minus_1', 0) for log in extra_info_logs][-1]
+            ax1.quiver(positions[ii][0], positions[ii][1], positions[ii][2], 30000000*dv_n_minus_1[0], 30000000*dv_n_minus_1[1], 30000000*dv_n_minus_1[2], arrow_length_ratio=0.2, color='red')
+            state_current = np.concatenate((positions[ii], velocities[ii]))
+            # print(velocities[ii])
+            # print(dv_data[ii])
+            dv_rtn = np.transpose(YA.RotMat_RTN2Inertial(state_current)) @ dv_n_minus_1
+            total_dv += norm(dv_rtn)
+            ax2.stem(ii+1-0.2, dv_rtn[0], linefmt='Black', basefmt='White')
+            ax2.stem(ii+1, dv_rtn[1], linefmt='Red', basefmt='White')
+            ax2.stem(ii+1+0.2, dv_rtn[2], linefmt='Green', basefmt='White')
+            ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
         
     # print('Total dv: ' + str(total_dv))
     x_coords, y_coords, z_coords = zip(*positions)
@@ -220,7 +230,7 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
         mass_data = [log.get('final_mass', 0) for log in extra_info_logs]    
         total_mass_array.append(mass_data[-1])
                 
-        episode_data = plot_traj_kepler(plotting_data, model_path, ellipsoid_points, dv_data)
+        episode_data = plot_traj_kepler(plotting_data, model_path, ellipsoid_points, dv_data, extra_info_logs)
         episode_data_list.append(episode_data)
 
         # if num_episodes != 1:
