@@ -130,7 +130,7 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_inf
             # print(velocities[ii])
             # print(dv_data[ii])
             dv_rtn = np.transpose(YA.RotMat_RTN2Inertial(state_current)) @ dv_n_minus_1
-            total_dv += norm(dv_rtn)
+            total_dv += norm(dv_data[ii])
             ax2.stem(ii+1-0.2, dv_rtn[0], linefmt='Black', basefmt='White')
             ax2.stem(ii+1, dv_rtn[1], linefmt='Red', basefmt='White')
             ax2.stem(ii+1+0.2, dv_rtn[2], linefmt='Green', basefmt='White')
@@ -164,7 +164,7 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_inf
 
     ax1.view_init(elev=90, azim=-90)
     ax1.legend()
-    ax2.legend(['Radial', 'Transverse', 'Normal'], loc='upper right')
+    ax2.legend(['Radial', 'Transverse', 'Normal'], loc='lower right')
 
     directory_path = os.path.dirname(args.model_dir)    # each interval zip file
     last_directory = os.path.basename(directory_path)   # model name
@@ -177,9 +177,9 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_inf
     fig1.savefig(plot_name_png)
     fig2.savefig(stem_name_png)
 
-    plt.show()
-    # plt.close()
-    # plt.close()
+    # plt.show()
+    plt.close()
+    plt.close()
     
     return {
         'total_dv': total_dv
