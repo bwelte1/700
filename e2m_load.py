@@ -142,6 +142,7 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_inf
     fig1.savefig(plot_name_png)
     fig2.savefig(stem_name_png)
 
+    plt.show()
     plt.close()
     plt.close()
     
