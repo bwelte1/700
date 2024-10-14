@@ -52,5 +52,5 @@ The ```--episodes``` argument specifies the number of episodes to simulate durin
 The ```SimulationData``` branch contains models and datasets used in one of the project reports. These models serve as useful references for comparing your results and conducting further analysis.
 
 ## Model Performance
-Our model demonstrates strong alignment with results from prior studies, which were used to guide the selection of several default parameters. By tuning mission-specific parameters and RL configurations, the model can generate near-optimal trajectories for Earth-to-Mars transfers. The current framework is capable of designing high-efficiency trajectories for space missions while automatically satisfying complex constraints.
+Our model demonstrates strong alignment with results from prior studies, which were used to guide the selection of several default parameters. By tuning mission-specific parameters and RL configurations, the model can generate near-optimal trajectories for Earth-to-Mars transfers with the limitation that the trajectory must have a low number of impulses. The current framework is capable of designing high-efficiency trajectories for space missions while automatically satisfying complex constraints.
 
