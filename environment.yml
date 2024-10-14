@@ -1,0 +1,5 @@
+name: "C:\\Users\\User\\miniconda3\envs\\pykep_env"
+channels:
+  - conda-forge
+  - defaults
+prefix: "C:\\Users\\User\\miniconda3\envs\\pykep_env"
