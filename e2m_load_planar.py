@@ -36,8 +36,6 @@ def plot_run(positions, r0, rT):
     ax.set_zlabel('Z Position (km e8)')
     ax.set_title('Spacecraft Position Relative to the Sun')
 
-    # plt.show()
-
 class EnvLoggingWrapper(gym.Wrapper):
     def __init__(self, env):
         super(EnvLoggingWrapper, self).__init__(env)
@@ -66,23 +64,6 @@ class EnvLoggingWrapper(gym.Wrapper):
     
     def get_extra_info_logs(self):
         return self.extra_info_logs
-    
-def upload_matlab(runlog, runlog_extra):
-    #semiAxes_values = [info['semiAxes'] for info in runlog_extra if 'semiAxes' in info]
-    #print(f"semiAxes values for episode {episode + 1}: {semiAxes_values}")
-
-    directory = 'matlab_exports'
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-    # Convert logs to dictionaries
-    data = {
-        'extra_info_logs': np.array(runlog_extra),
-        'run_log': np.array(runlog)
-    }
-
-    # Save data to a MAT file in the specified directory
-    scipy.io.savemat(os.path.join(directory, 'data.mat'), data)
 
 def plot_traj_kepler(plot_data, model_path, ellipsoid_points, TIME_STEP):
     positions = [state[:3] for state in plot_data]
@@ -93,7 +74,6 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, TIME_STEP):
     print("Plot Timestep = " + str(TIME_STEP))
 
     for ii in range(len(positions)):
-        #print(positions[ii])
         pk.orbit_plots.plot_kepler(
             r0=positions[ii],            # Initial position (3D)
             v0=velocities[ii],           # Initial velocity (3D)
@@ -128,26 +108,16 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, TIME_STEP):
 
     ax.view_init(elev=90, azim=-90)
     ax.legend()
-
-    # colours = ['red', 'blue', 'green', 'orange', 'purple', 'cyan']
-    # print(ellipsoid_points)
-    # for ellipsoid in ellipsoid_points:
-    #     # Plot each of the 6 points in the matrix, with distinct colors
-    #     for point in range(6):
-    #         ax.scatter(ellipsoid[point, 0], ellipsoid[point, 1], ellipsoid[point, 2], color=colours[point])
     
     directory_path = os.path.dirname(args.model_dir)    # each interval zip file
     last_directory = os.path.basename(directory_path)   # model name
     interval_number = os.path.basename(model_path)   # model name
     plot_folder = os.path.join(os.getcwd(), 'Plots', last_directory)    # plot folder for model
     plot_name_png = os.path.join(plot_folder, f'interval_{interval_number}.png')  
-    # fig1.savefig(plot_name_png)
 
     plt.show()
 
 def plot_ellipsoid(ellipsoid, ax):
-
-
     colors = ['r', 'g', 'k', 'c', 'm', 'y']
 
     # Plot the original points as scatter
@@ -165,52 +135,18 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
     wrapped_env = EnvLoggingWrapper(env)
 
     for episode in range(num_episodes):
-        # fig1 = plt.figure()
-        # ax = fig1.add_subplot(111, projection='3d')  # Create 3D axes
         obs = wrapped_env.reset()
         r_prev = obs[:3]
         v_prev = obs[3:6]
         done = False
         while not done:
-            # print(f"Analysis of next arc")
-            # Plot Lambert
             action, _states = model1.predict(obs)
             obs, reward, done, truncated, info = wrapped_env.step(action)
-
-            # r_new = obs[:3]
-            # print(f"v_prev: {v_prev}")
-            # l = lambert_problem(r1=r_prev, r2=r_new, tof=((tof/N_NODES)*DAY2SEC), mu=amu, max_revs=0) 
-            # r_prev = r_new
-            # v_new = l.get_v1()[0]
-            # print(f"v_new: {v_new}")
-            # dv = np.subtract(v_new, v_prev)
-            # print(f"dv: {dv}")
-            # print(f"norm: {norm(dv)}")
-            # print(obs[6])
-            # v_prev = obs[3:6]
-            # pk.orbit_plots.plot_lambert(l, axes=ax)
-            # ax.scatter(r_new[0], r_new[1], r_new[2], c='k', marker='o', s=10) 
-            
-            # Plot Kepler
-            # v_current = obs[3:6]
-            # print(f"velocity at end of previous arc: {v_current}")
-            # action, _states = model1.predict(obs)
-            # obs, reward, done, truncated, info = wrapped_env.step(action)
-            # dv = obs[8:11] # dv now omitted from observation
-            # new_v = v_current + dv
-            # print(f"dv required to enter current arc from previous arc: {dv}")
-            # print(f"velocity at start of current arc: {new_v}")
-            # pk.orbit_plots.plot_kepler(r0 = np.array(obs[:3]), v0 = np.array(new_v), tof=(tof/num_nodes)*DAY2SEC, mu=amu, axes=ax)
-            
-            # # Save the figure for each iteration
-            # iteration += 1
-            # fig1.savefig(f'./Plots/loadrunfig_iteration_{iteration}.png')
         
         extra_info_logs = wrapped_env.get_extra_info_logs()
         run_log = wrapped_env.get_state_logs()
 
         ellipsoid_points = [log['semiAxes'] for log in extra_info_logs]
-        # print("Ellipsoid Points: " + str(ellipsoid_points))
         plotting_data = [log['Plotting'] for log in extra_info_logs]
         TIME_STEP = obs[7] / N_NODES
         plot_traj_kepler(plotting_data, model_path, ellipsoid_points, TIME_STEP)
@@ -218,27 +154,6 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
 
         if num_episodes != 1:
             print(f"Episode {episode + 1} finished.")
-        # positions = [state[:3] for state in run_log]
-        # plot_run(positions, rI, rT)
-        # positions_alt = [info['state_alt'] for info in extra_info_logs if 'state_alt' in info]
-        # sun = np.concatenate((rT, vT))
-        # positions_alt.append(sun)
-        # plot_run(positions_alt, r0, rT)
-        
-        # ax.set_title("Combined Trajectory of All Episodes")
-        # ax.set_xlabel("x")
-        # ax.set_ylabel("y")
-        # ax.set_zlabel("z")
-        # ax.scatter([0], [0], [0], c='#FFA500', marker='o', s=100)  # Sun at origin
-        # ax.scatter(rI[0], rI[1], rI[2], c='b', marker='o', s=50)  # Earth
-        # ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Mars
-        # # set axis limits to ensure all axes are on the same scale
-        # axes_scale = 2e8
-        # ax.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
-        # ax.set_ylim([-axes_scale, axes_scale])  # Set Y-axis limit
-        # ax.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
-        # ax.set_box_aspect([1,1,1])
-    
         
 def display_plots():
     directory_path = os.path.dirname(args.model_dir)    # each interval zip file
