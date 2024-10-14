@@ -85,10 +85,7 @@ class Earth2MarsEnvPlanar(gym.Env):
         
         self.isDone = False
         self.extra_info = {}
-        # Timing
-        #self.TIME_STEP = self.mission_time / self.N_NODES
         self.TIME_STEP = None
-        # print(self.TIME_STEP)
         self.training_steps = 0
         
         """ ENVIRONMENT BOUNDARIES """
@@ -136,17 +133,9 @@ class Earth2MarsEnvPlanar(gym.Env):
             self.TIME_STEP = 55 + action[3] * 30
             # Remove the TIME_STEP from the action (we only need the first 3 components for movement)
             action = action[:3]
-
-
-        #Manually set action
-        #manual_action = [1, 1, 1]
-
-
-        # Invalid action
         
         # State at next time step and current control
         r_next, v_next, m_next, dv = self.propagation_step(action)
-        #r_next, v_next, m_next, dv = self.propagation_step(action)
             
         # Info (state at the beginning of the segment)
         self.sol['rx'] = self.r_current[0]
@@ -166,9 +155,7 @@ class Earth2MarsEnvPlanar(gym.Env):
 
         self.r_current = r_next
         self.v_current = v_next
-        
-        # print("DV: " + str(dv))
-        # print("Norm DV: " + str(norm(dv)))
+
         reward = self.getReward(m_next, action, dv)
 
         self.m_current = m_next
@@ -179,17 +166,11 @@ class Earth2MarsEnvPlanar(gym.Env):
                 self.m_current, self.time_passed]).astype(np.float64)
         
         self.training_steps += 1
-        #print("Impulse Number : " + str(self.training_steps))
         
         truncated = False       # necessary return of step, if step is cut off early due to timeout etcc.
         return obs, reward, self.isDone, truncated, info
     
     def getReward(self, mass_next, action, dv):
-        # reward = mass_next - self.m_current
-        # print("DeltaV: " + str(dv))
-        # print("Position: " + str(self.r_current))
-        # print("Initial Mass: " + str(self.m_current) + " Final Mass: " + str(mass_next))
-        # print("Mass Change: " + str(reward))
         reward = 0
         reward -= norm(dv) * 20
 
@@ -198,18 +179,7 @@ class Earth2MarsEnvPlanar(gym.Env):
                 reward -= 25
             reward -= 100*max(0, abs(action[ii]) - 1)   # added punishment for actions > 1
 
-        # reward -= 0.05*((max(0, norm(dv) - self.max_thrust)) ** 2)  # added punishment for dv > dv_max
-
-        # print(reward)
         return reward
-    
-        # if (norm(self.r_current) < norm(self.r0)):
-        #     radial_decrease = norm(self.r0) - norm(self.r_current)
-        #     penalty = (radial_decrease / 3e5) + 25
-        #     reward -= penalty
-        
-        # print(reward)
-        
         
     def propagation_step(self, action):
         # Position and velocity at the next time step given no dv, propagate_lagrangian returns tuple containing final position and velocity
@@ -218,19 +188,15 @@ class Earth2MarsEnvPlanar(gym.Env):
         dv = [0, 0, 0]
         if (self.N_NODES-1) > self.training_steps:
             if (self.using_reachability == 1):   
-                #print("Time Step = " + str(self.TIME_STEP))
                 state0 = np.concatenate((self.r_current, self.v_current))
                 statef = np.concatenate((r_centre, v_centre))
-                #print("Yaw: " + str(action[0]) + " Pitch: " + str(action[1]) + " Radius: " + str(action[2]))
 
                 #Gets current STM
                 STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 #Obtains useful STM Quadrant
                 STM_Current = STM_Current_Full[0:3, 3:6]
-                #print("Useful untransformed STM: " + str(STM_Current))
 
                 #Obtains RTN State Transition Matrix
-                #STM_RTN = np.dot(YA.DCM_LVLH2RTN(), STM_Current)
                 STM_RTN = YA.DCM_LVLH2RTN() @ STM_Current @ np.transpose(YA.DCM_LVLH2RTN())
 
                 #Constructs Rotation Matrices
@@ -240,7 +206,6 @@ class Earth2MarsEnvPlanar(gym.Env):
 
                 #Obtains HCI Frame STM
                 STM_HCI = M_RTN2ECI_f @ STM_RTN @ M_RTN2ECI_init_T
-
 
                 STM_SQUARED = np.transpose(STM_HCI @ STM_HCI)
 
@@ -279,48 +244,20 @@ class Earth2MarsEnvPlanar(gym.Env):
                 p[:,5] = r_centre - RS_axes_ordered[:, 2]*self.max_thrust
                 p[:,6] = r_centre
 
-                # print("Max Change in distance = " + str(delta_r_max))
-                # semiAxes_pos = np.transpose(r_centre) + delta_r_max 
-                # semiAxes_neg = np.transpose(r_centre) - delta_r_max 
-                # semiAxes = np.concatenate([semiAxes_pos, semiAxes_neg])
                 self.extra_info['semiAxes'] = p
-                #print("Max position change: " + str(delta_r_max))
-
-                #ALTERNATE REACHABILTY FORMULATION 
-                # #Creates characteristic ellipsoid matrix and performs eigendecomposition
-                # M_Ellipsoid = np.matmul(np.transpose(STM_RTN),STM_RTN)
-                # eigvals, eigvecs = np.linalg.eig(M_Ellipsoid)
-
-                #HCI_eigvecs = M_RTN2ECI_f @ eigvecs
-
-                # #Gets body-centric ellipse axes
-                # axes = self.getEllipseAxes(self,eigvals,eigvecs,STM_RTN)
-                #print("Action: " + str(action))
-
-                #Maps action to points within ellipse to find distance from centre of ellipse
-                
-                #print("Position Offset: " + str(offset_position))
-
-                #print("Next Position: " + str(r_next))
-
-                #Finds velocity at next stage using lambert and produces dv
-                # print(r_next)
-                # print(self.r_current)
+            
                 final_step_lambert = lambert_problem(r1=self.r_current, r2=r_next, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 v_r1 = final_step_lambert.get_v1()[0]
                 v_next = final_step_lambert.get_v2()[0]
-                #print(v_next)
+
                 dv = np.subtract(v_r1,self.v_current)
                 self.plotting = np.concatenate((self.r_current, v_r1))
                 self.extra_info['Plotting'] = self.plotting.copy()
-                #print("Reachability DeltaV: " + str(dv))
-                #print("Reachability DeltaV Mag: " + str(norm(dv)))
-                # print("Reach")
+
             else:
                 state_alt, dv = self.without_reach(action)
                 r_next = state_alt[:3]
                 v_next = state_alt[3:6]
-                # print("No Reach")
                 
             m_next = self.Tsiolkovsky(array(dv))
         
@@ -334,19 +271,10 @@ class Earth2MarsEnvPlanar(gym.Env):
             self.plotting = np.concatenate((self.r_current, lambert_v1))
             self.extra_info['Plotting'] = self.plotting.copy()
 
-            # print("First")
-            # print(self.v_current)
-            # print(lambert_v1)
-            # print(dv_N_minus_1)
-
             # Equalization with mars (step N)
             lambert_v2 = final_step_lambert.get_v2()[0]
-            # print("First")
-            # print(self.vT)
-            # print(lambert_v2)
             dv_equalization = np.subtract(array(self.vT), array(lambert_v2)) # velocity of mars - velocity at final step 
             m_next = self.Tsiolkovsky(array(dv_equalization))
-            # print(dv_equalization)
 
             self.m_current = carry_m
             
@@ -396,7 +324,6 @@ class Earth2MarsEnvPlanar(gym.Env):
     
     def Tsiolkovsky(self, dv):
         m_next = self.m_current*exp(-norm(dv)/self.v_ejection)
-        # print("Mass from: " + str(self.m_current) + " to " + str(m_next))
         return m_next
 
     def getEllipseAxes(self,eigenvalues,eigenvectors,STM):
@@ -419,15 +346,11 @@ class Earth2MarsEnvPlanar(gym.Env):
         axes_sorted = axes[:, norm_indices_s]
         return axes_sorted
 
-    def action2pos(self, axes, action, r_centre):
-        # print("Action: " + str(action))
-        
+    def action2pos(self, axes, action, r_centre):       
         #Denormalising angles
         yaw = action[0] * np.pi                 # [-π to π]
         pitch = action[1] * ((np.pi) / 2)       # [-π/2 to π/2]
         r = action[2]                           # [-1 to 1]
-
-        #print("Yaw, pitch, and r" + str([yaw, pitch, r]))
         
         # Spherical to Cartesian and Scale with ellipsoid
         x = r * np.cos(pitch) * np.cos(yaw) * self.max_thrust
@@ -447,13 +370,7 @@ class Earth2MarsEnvPlanar(gym.Env):
         translated_point = aligned_point + r_centre
 
         translated_point = np.squeeze(translated_point)
-        
-        # # Map the Cartesian coordinates to the ellipsoid axes
-        # pos = x * axes[:, 0] + y * axes[:, 1] + z * axes[:, 2]
-        
-        # #Eliminating very small values
-        # pos[np.abs(pos) < 1e-10] = 0
-        #Point within ellipsoid
+
         return translated_point
     
     def without_reach(self, action):
@@ -469,8 +386,7 @@ class Earth2MarsEnvPlanar(gym.Env):
         
         v_current_alt = [a + b for a, b in zip(self.v_current, v_delta_alt)]
         r_next_alt, v_next_alt = propagate_lagrangian(r0 = self.r_current, v0 = v_current_alt, tof=(self.TIME_STEP*DAY2SEC), mu = self.amu)
-        #print("Classic DeltaV: " + str(v_delta_alt))
-        #print("Classic DeltaV Mag: " + str(norm(v_delta_alt)))
+
         state_alt = np.concatenate((r_next_alt, v_next_alt))
         self.plotting = np.concatenate((self.r_current, v_current_alt))
         self.extra_info['Plotting'] = self.plotting.copy()
