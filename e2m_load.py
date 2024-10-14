@@ -9,7 +9,6 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.ticker import MaxNLocator
 from stable_baselines3 import PPO
 from e2m_env import Earth2MarsEnv
-from e2v_env import Earth2VenusEnv
 import scipy.io
 import numpy as np
 from numpy.linalg import norm
@@ -265,28 +264,15 @@ if __name__ == '__main__':
     r0 = (-140699693.0, -51614428.0, 980.0)
     v0 = (9.774596, -28.07828, 4.337725e-4)
 
-    if planet == 'mars':
-        #Same init conds as Zavoli Federici Table 1 (km and km/s)
-        rT = (-172682023.0, 176959469.0, 7948912.0)
-        vT = (-16.427384, -14.860506, 9.21486e-2)
-        env = Earth2MarsEnv(
-        N_NODES=N_NODES, 
-        amu=amu, 
-        v0=v0, 
-        r0=r0, 
-        vT=vT, 
-        rT=rT, 
-        m0=m0, 
-        max_thrust=Tmax,
-        v_ejection=v_ejection,
-        mission_time=tof,
-        using_reachability=using_reachability
-        )
-    elif planet == 'venus':
+    rT = (-172682023.0, 176959469.0, 7948912.0)
+    vT = (-16.427384, -14.860506, 9.21486e-2)
+
+    if planet == 'venus':
         #Same init conds as Zavoli Federici Table 1 (km and km/s)
         rT = (108210000, 0.0, 0.0)  # halfway between aphelion and perihelion in x direction, 0 in y and z. taken from NASA
         vT = (0, 35.02, 0)          # mean velocity in +y direction (perpendicular to distance in +x direction)
-        env = Earth2VenusEnv(
+
+    env = Earth2MarsEnv(
         N_NODES=N_NODES, 
         amu=amu, 
         v0=v0, 
@@ -297,8 +283,7 @@ if __name__ == '__main__':
         max_thrust=Tmax,
         v_ejection=v_ejection,
         mission_time=tof,
-        using_reachability=using_reachability
-        )
+        using_reachability=using_reachability)
 
 
     load_and_run_model(model_path=args.model_dir, env=env, num_episodes=args.episodes, rI=r0, rT=rT, tof=tof, amu=amu, num_nodes=N_NODES)
