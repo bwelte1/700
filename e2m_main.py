@@ -53,7 +53,7 @@ def plotRun(state_logs,r0,rT):
     ax.set_xlabel('X Position (km e8)')
     ax.set_ylabel('Y Position (km e8)')
     ax.set_zlabel('Z Position (km e8)')
-    # ax.set_title('Spacecraft Position Relative to the Sun')
+    ax.set_title('Spacecraft Position Relative to the Sun')
 
     plt.show()
     
@@ -71,11 +71,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--settings', type=str, default="settings_def.txt", \
         help='Input settings file')
-    # parser.add_argument('--input_model', type=str, default="final_model", \
-    #     help='Input model to load')
     args = parser.parse_args()
     settings_file = "./settings_files/" + args.settings
-    # input_model = "./settings_files/" + args.input_model
     
     #Read settings and assign environment and model parameters
     with open(settings_file, "r") as input_file: # with open context
@@ -129,10 +126,7 @@ if __name__ == '__main__':
     ## INITIAL CONDITIONS ##
     
     # Timing
-    start_date_julian = int(start_date_julian)  # departure date from earth
-    departure_date_e = epoch(start_date_julian)
     tof = float(tof)      # predetermined TOF
-    arrival_date_e = epoch(tof+start_date_julian)
     r0 = (-140699693.0, -51614428.0, 980.0)
     v0 = (9.774596, -28.07828, 4.337725e-4)
 
@@ -159,7 +153,7 @@ if __name__ == '__main__':
         )
     elif planet == 'venus':
         #Same init conds as Zavoli Federici Table 1 (km and km/s)
-        rT = (108210000, 0.0, 0.0)  # halfway between aphelion and perihelion in x direction, 0 in y and z. taken from NASA
+        rT = (108210000, 0.0, 0.0)  # halfway between aphelion and perihelion in x direction, 0 in y and z. taken from NASA, fix these for legitimate simulation
         vT = (0, 35.02, 0)          # mean velocity in +y direction (perpendicular to distance in +x direction)
         
         env = Earth2VenusEnv(
@@ -280,9 +274,3 @@ if __name__ == '__main__':
             model.save(model_path)
             print(f"Model: {model_path}")
             print(f"Model saved at timestep {Interval*(i+1)}")            
-    
-    # Run_log = wrapped_env.get_state_logs()
-    # plotRun(Run_log,r0,rT)
-
-
-    
