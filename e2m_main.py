@@ -26,9 +26,7 @@ from pykep.core import epoch, lambert_problem
 from pykep import MU_SUN, G0
 
 from e2m_env import Earth2MarsEnv
-from e2v_env import Earth2VenusEnv
 from e2m_load import load_and_run_model
-#
 
 def custom_lr_schedule(initial_value, final_value):
     def func(progress_remaining):
@@ -124,8 +122,8 @@ if __name__ == '__main__':
     v_ejection = (pk.G0/1000.*Isp)/vconv   # propellant ejection velocity TODO: Confirm if suitable currently 0.658 if Isp = 2000
     
     ## INITIAL CONDITIONS ##
-    
-    # Timing
+
+
     tof = float(tof)      # predetermined TOF
     r0 = (-140699693.0, -51614428.0, 980.0)
     v0 = (9.774596, -28.07828, 4.337725e-4)
@@ -133,30 +131,16 @@ if __name__ == '__main__':
     using_reachability = bool(int(using_reachability))
     tof = int(tof)
 
-    if planet == 'mars':
-        #Same init conds as Zavoli Federici Table 1 (km and km/s)
-        rT = (-172682023.0, 176959469.0, 7948912.0)
-        vT = (-16.427384, -14.860506, 9.21486e-2)
-        
-        env = Earth2MarsEnv(
-        N_NODES=N_NODES, 
-        amu=amu, 
-        v0=v0, 
-        r0=r0, 
-        vT=vT, 
-        rT=rT, 
-        m0=m0, 
-        max_thrust=Tmax,
-        v_ejection=v_ejection,
-        mission_time=tof,
-        using_reachability=using_reachability
-        )
-    elif planet == 'venus':
+    #Same init conds as Zavoli Federici Table 1 (km and km/s)
+    rT = (-172682023.0, 176959469.0, 7948912.0)
+    vT = (-16.427384, -14.860506, 9.21486e-2)
+    
+    if planet == 'venus':
         #Same init conds as Zavoli Federici Table 1 (km and km/s)
         rT = (108210000, 0.0, 0.0)  # halfway between aphelion and perihelion in x direction, 0 in y and z. taken from NASA, fix these for legitimate simulation
         vT = (0, 35.02, 0)          # mean velocity in +y direction (perpendicular to distance in +x direction)
         
-        env = Earth2VenusEnv(
+    env = Earth2MarsEnv(
         N_NODES=N_NODES, 
         amu=amu, 
         v0=v0, 
