@@ -9,7 +9,6 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.ticker import MaxNLocator
 from stable_baselines3 import PPO
 from e2m_env import Earth2MarsEnv
-from e2v_env import Earth2VenusEnv
 import scipy.io
 import numpy as np
 from numpy.linalg import norm
@@ -36,9 +35,6 @@ def plot_run(positions, r0, rT):
     ax.set_xlabel('X Position (km e8)')
     ax.set_ylabel('Y Position (km e8)')
     ax.set_zlabel('Z Position (km e8)')
-    # ax.set_title('Spacecraft Position Relative to the Sun')
-
-    # plt.show()
 
 class EnvLoggingWrapper(gym.Wrapper):
     def __init__(self, env):
@@ -73,27 +69,9 @@ class EnvLoggingWrapper(gym.Wrapper):
         self.extra_info_logs = []  # Reset any extra info logs, including impulse tracking
         self.info_logs = []
 
-def upload_matlab(runlog, runlog_extra):
-    #semiAxes_values = [info['semiAxes'] for info in runlog_extra if 'semiAxes' in info]
-    #print(f"semiAxes values for episode {episode + 1}: {semiAxes_values}")
-
-    directory = 'matlab_exports'
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-    # Convert logs to dictionaries
-    data = {
-        'extra_info_logs': np.array(runlog_extra),
-        'run_log': np.array(runlog)
-    }
-
-    # Save data to a MAT file in the specified directory
-    scipy.io.savemat(os.path.join(directory, 'data.mat'), data)
-
 def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_info_logs):
     positions = [state[:3] for state in plot_data]
     velocities = [state[3:6] for state in plot_data]
-    # print(velocities)
 
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111, projection='3d')
@@ -102,7 +80,6 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_inf
     total_dv = 0
 
     for ii in range(len(positions)):
-        #print(positions[ii])
         pk.orbit_plots.plot_kepler(
             r0=positions[ii],            # Initial position (3D)
             v0=velocities[ii],           # Initial velocity (3D)
@@ -115,8 +92,6 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_inf
         if isinstance(dv_data[ii], np.ndarray):
             ax1.quiver(positions[ii][0], positions[ii][1], positions[ii][2], 30000000*dv_data[ii][0], 30000000*dv_data[ii][1], 30000000*dv_data[ii][2], arrow_length_ratio=0.2, color='red')
             state_current = np.concatenate((positions[ii], velocities[ii]))
-            # print(velocities[ii])
-            # print(dv_data[ii])
             dv_rtn = np.transpose(YA.RotMat_RTN2Inertial(state_current)) @ dv_data[ii]
             total_dv += norm(dv_rtn)
             ax2.stem(ii+1-0.2, dv_rtn[0], linefmt='Black', basefmt='White')
@@ -127,8 +102,6 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_inf
             dv_n_minus_1 = [log.get('dv_n_minus_1', 0) for log in extra_info_logs][-1]
             ax1.quiver(positions[ii][0], positions[ii][1], positions[ii][2], 30000000*dv_n_minus_1[0], 30000000*dv_n_minus_1[1], 30000000*dv_n_minus_1[2], arrow_length_ratio=0.2, color='red')
             state_current = np.concatenate((positions[ii], velocities[ii]))
-            # print(velocities[ii])
-            # print(dv_data[ii])
             dv_rtn = np.transpose(YA.RotMat_RTN2Inertial(state_current)) @ dv_n_minus_1
             total_dv += norm(dv_data[ii])
             ax2.stem(ii+1-0.2, dv_rtn[0], linefmt='Black', basefmt='White')
@@ -136,9 +109,7 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_inf
             ax2.stem(ii+1+0.2, dv_rtn[2], linefmt='Green', basefmt='White')
             ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
         
-    # print('Total dv: ' + str(total_dv))
     x_coords, y_coords, z_coords = zip(*positions)
-    # ax1.scatter(x_coords, y_coords, z_coords, c='b', marker='o')
     ax1.scatter([0], [0], [0], c='#FFA500', marker='o', s=100, label="Sun")  # Sun at origin
     ax1.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50, label="Earth")  # Earth
     ax1.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50, label="Mars")   # Target Planet
@@ -146,21 +117,15 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_inf
     ax1.set_xlabel('X Position (km e8)')
     ax1.set_ylabel('Y Position (km e8)')
     ax1.set_zlabel('Z Position (km e8)')
-    # ax1.set_title('Spacecraft Position Relative to the Sun')
+
     ax2.set_xlabel('Impulse')
     ax2.set_ylabel('dv (km/s)')
-    # ax2.set_title('RTN Components of dv for each Impulse across the Trajectory')
 
     axes_scale = 2e8
     ax1.set_xlim([-axes_scale, axes_scale])  # Set X-axis limit
     ax1.set_ylim([-axes_scale, axes_scale])  # Set Y-axis limit
     ax1.set_zlim([-axes_scale, axes_scale])  # Set Z-axis limit
     ax1.set_box_aspect([1,1,1])
-
-    colours = ['red', 'black', 'green', 'orange', 'purple', 'cyan', 'gray']
-    # for ellipsoid in ellipsoid_points:
-    #     for point in range(6):
-    #         ax1.scatter(ellipsoid[0,point], ellipsoid[1,point], ellipsoid[2,point], color=colours[point])
 
     ax1.view_init(elev=90, azim=-90)
     ax1.legend()
@@ -177,7 +142,6 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_inf
     fig1.savefig(plot_name_png)
     fig2.savefig(stem_name_png)
 
-    # plt.show()
     plt.close()
     plt.close()
     
@@ -188,11 +152,8 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, dv_data, extra_inf
     
 
 def plot_ellipsoid(ellipsoid, ax):
-
-
     colors = ['r', 'g', 'k', 'c', 'm', 'y']
 
-    # Plot the original points as scatter
     for i in range(ellipsoid.shape[0]):
         ax.scatter(ellipsoid[i, 0], ellipsoid[i, 1], ellipsoid[i, 2], color=colors[i])
 
@@ -232,9 +193,6 @@ def load_and_run_model(model_path, env, num_episodes, rI, rT, num_nodes, tof, am
                 
         episode_data = plot_traj_kepler(plotting_data, model_path, ellipsoid_points, dv_data, extra_info_logs)
         episode_data_list.append(episode_data)
-
-        # if num_episodes != 1:
-            # print(f"Episode {episode + 1} finished.")
 
     mean_mass = np.mean(total_mass_array)
     mean_dv = np.mean([data['total_dv'] for data in episode_data_list])
@@ -306,28 +264,15 @@ if __name__ == '__main__':
     r0 = (-140699693.0, -51614428.0, 980.0)
     v0 = (9.774596, -28.07828, 4.337725e-4)
 
-    if planet == 'mars':
-        #Same init conds as Zavoli Federici Table 1 (km and km/s)
-        rT = (-172682023.0, 176959469.0, 7948912.0)
-        vT = (-16.427384, -14.860506, 9.21486e-2)
-        env = Earth2MarsEnv(
-        N_NODES=N_NODES, 
-        amu=amu, 
-        v0=v0, 
-        r0=r0, 
-        vT=vT, 
-        rT=rT, 
-        m0=m0, 
-        max_thrust=Tmax,
-        v_ejection=v_ejection,
-        mission_time=tof,
-        using_reachability=using_reachability
-        )
-    elif planet == 'venus':
+    rT = (-172682023.0, 176959469.0, 7948912.0)
+    vT = (-16.427384, -14.860506, 9.21486e-2)
+
+    if planet == 'venus':
         #Same init conds as Zavoli Federici Table 1 (km and km/s)
         rT = (108210000, 0.0, 0.0)  # halfway between aphelion and perihelion in x direction, 0 in y and z. taken from NASA
         vT = (0, 35.02, 0)          # mean velocity in +y direction (perpendicular to distance in +x direction)
-        env = Earth2VenusEnv(
+
+    env = Earth2MarsEnv(
         N_NODES=N_NODES, 
         amu=amu, 
         v0=v0, 
@@ -338,9 +283,7 @@ if __name__ == '__main__':
         max_thrust=Tmax,
         v_ejection=v_ejection,
         mission_time=tof,
-        using_reachability=using_reachability
-        )
+        using_reachability=using_reachability)
 
 
     load_and_run_model(model_path=args.model_dir, env=env, num_episodes=args.episodes, rI=r0, rT=rT, tof=tof, amu=amu, num_nodes=N_NODES)
-    # display_plots()
