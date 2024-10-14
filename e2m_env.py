@@ -233,7 +233,7 @@ class Earth2MarsEnv(gym.Env):
                 # Obtains STM in HCI Frame
                 STM_HCI = M_RTN2ECI_f @ STM_RTN @ M_RTN2ECI_init_T
 
-                STM_SQUARED = np.transpose(STM_HCI @ STM_HCI)
+                STM_SQUARED = np.transpose(STM_HCI) @ STM_HCI
 
                 eigvals, eigvecs = np.linalg.eig(STM_SQUARED)
 
@@ -303,7 +303,6 @@ class Earth2MarsEnv(gym.Env):
                 v_next = final_step_lambert.get_v2()[0]
                 #print(v_next)
                 dv = np.subtract(v_r1,self.v_current)
-                self.extra_info['dv'] = dv
                 self.plotting = np.concatenate((self.r_current, v_r1))
                 self.extra_info['Plotting'] = self.plotting.copy()
                 #print("Reachability DeltaV: " + str(dv))
@@ -322,6 +321,7 @@ class Earth2MarsEnv(gym.Env):
             final_step_lambert = lambert_problem(r1=self.r_current, r2=self.rT, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
             lambert_v1 = final_step_lambert.get_v1()[0]
             dv_N_minus_1 = array(lambert_v1) - array(self.v_current)
+            self.extra_info['dv_n_minus_1'] = dv_N_minus_1
             carry_m = self.m_current
             self.m_current = self.Tsiolkovsky(array(dv_N_minus_1))
             self.plotting = np.concatenate((self.r_current, lambert_v1))
@@ -343,6 +343,7 @@ class Earth2MarsEnv(gym.Env):
             #Scalar Dv still works for Tsiolkovsky
             dv = norm(dv_N_minus_1) + norm(dv_equalization)
         
+        self.extra_info['dv'] = dv
         return r_next, v_next, m_next, dv
     
         

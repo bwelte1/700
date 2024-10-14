@@ -31,9 +31,9 @@ def plot_run(positions, r0, rT):
     ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50)  # Earth
     ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50)  # Mars
 
-    ax.set_xlabel('X Position (km)')
-    ax.set_ylabel('Y Position (km)')
-    ax.set_zlabel('Z Position (km)')
+    ax.set_xlabel('X Position (km e8)')
+    ax.set_ylabel('Y Position (km e8)')
+    ax.set_zlabel('Z Position (km e8)')
     ax.set_title('Spacecraft Position Relative to the Sun')
 
     # plt.show()
@@ -110,9 +110,9 @@ def plot_traj_kepler(plot_data, model_path, ellipsoid_points, TIME_STEP):
     ax.scatter(r0[0], r0[1], r0[2], c='b', marker='o', s=50, label="Earth")  # Earth
     ax.scatter(rT[0], rT[1], rT[2], c='r', marker='o', s=50, label="Mars")   # Mars
 
-    ax.set_xlabel('X Position (km)')
-    ax.set_ylabel('Y Position (km)')
-    ax.set_zlabel('Z Position (km)')
+    ax.set_xlabel('X Position (km e8)')
+    ax.set_ylabel('Y Position (km e8)')
+    ax.set_zlabel('Z Position (km e8)')
     ax.set_title('Spacecraft Position Relative to the Sun')
 
     axes_scale = 2e8

@@ -201,40 +201,30 @@ class Earth2VenusEnv(gym.Env):
             if (self.using_reachability == 1):   
                 state0 = np.concatenate((self.r_current, self.v_current))
                 statef = np.concatenate((r_centre, v_centre))
+                # print("Statef: {0}".format(statef))
                 #print("Yaw: " + str(action[0]) + " Pitch: " + str(action[1]) + " Radius: " + str(action[2]))
-
-
-
-
-
-
-                delta_v_max_RTN = self.max_thrust*np.eye(3)
 
                 #Gets current STM
                 STM_Current_Full = YA.YA_STM(state0=state0, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
                 #Obtains useful STM Quadrant
                 STM_Current = STM_Current_Full[0:3, 3:6]
-                #print("Useful untransformed STM: " + str(STM_Current))
 
-                #Obtains RTN State Transition Matrix
-                #STM_RTN = np.dot(YA.DCM_LVLH2RTN(), STM_Current)
+                # Obtains State Transition Matrix in RTN Frame
                 STM_RTN = YA.DCM_LVLH2RTN() @ STM_Current @ np.transpose(YA.DCM_LVLH2RTN())
 
-                #Constructs Rotation Matrices
+                # Constructs Rotation Matrices for conversion into ECI / HCI
                 M_RTN2ECI_init = YA.RotMat_RTN2Inertial(state0)
                 M_RTN2ECI_init_T = np.transpose(YA.RotMat_RTN2Inertial(state0))
                 M_RTN2ECI_f = YA.RotMat_RTN2Inertial(statef)
 
-                #Obtains HCI Frame STM
+                # Obtains STM in HCI Frame
                 STM_HCI = M_RTN2ECI_f @ STM_RTN @ M_RTN2ECI_init_T
 
-
-                STM_SQUARED = np.transpose(STM_HCI @ STM_HCI)
+                STM_SQUARED = np.transpose(STM_HCI) @ STM_HCI
 
                 eigvals, eigvecs = np.linalg.eig(STM_SQUARED)
 
                 idx = eigvals.argsort()[::-1]
-                norm_indices_s = np.argsort(-eigvals)
                 
                 eigvals = eigvals[idx]
                 eigvecs = eigvecs[:, idx]
@@ -245,33 +235,28 @@ class Earth2VenusEnv(gym.Env):
                 transverse = aligned[:,1]
                 normal = aligned[:,2]
 
+                # axes converted to RTN
                 radius_rtn = np.transpose(YA.RotMat_RTN2Inertial(statef)) @ radius
                 transverse_rtn = np.transpose(YA.RotMat_RTN2Inertial(statef)) @ transverse
                 normal_rtn = np.transpose(YA.RotMat_RTN2Inertial(statef)) @ normal
                 
+                # RTN reordered to TRN, made to be positive
                 RS_axes_ordered = np.zeros((3, 3))
-
-                # Ordered TRN
                 RS_axes_ordered[:, 0] = radius * np.sign(radius_rtn[1])
                 RS_axes_ordered[:, 1] = transverse * np.sign(transverse_rtn[0])
                 RS_axes_ordered[:, 2] = normal * np.sign(normal_rtn[2])
 
-
-                #print(STM_HCI)
-
-                # delta_v_max_HCI = M_RTN2ECI_init @ delta_v_max_RTN
-
-                # delta_r_max = STM_HCI @ delta_v_max_HCI
-
+                # Find optimal coordinate within ellipsoid
                 r_next = self.action2pos(RS_axes_ordered, action, r_centre)
                 
-                p = np.zeros((3,6))
+                p = np.zeros((3,7))
                 p[:,0] = r_centre + RS_axes_ordered[:, 0]*self.max_thrust
                 p[:,1] = r_centre - RS_axes_ordered[:, 0]*self.max_thrust
                 p[:,2] = r_centre + RS_axes_ordered[:, 1]*self.max_thrust
                 p[:,3] = r_centre - RS_axes_ordered[:, 1]*self.max_thrust
                 p[:,4] = r_centre + RS_axes_ordered[:, 2]*self.max_thrust
                 p[:,5] = r_centre - RS_axes_ordered[:, 2]*self.max_thrust
+                p[:,6] = r_centre
 
                 # print("Max Change in distance = " + str(delta_r_max))
                 # semiAxes_pos = np.transpose(r_centre) + delta_r_max 
@@ -319,18 +304,20 @@ class Earth2VenusEnv(gym.Env):
             m_next = self.Tsiolkovsky(array(dv))
         
         else:  
-            # Step to venus (step N-1)
+            # Step to mars (step N-1)
             final_step_lambert = lambert_problem(r1=self.r_current, r2=self.rT, tof=(self.TIME_STEP*DAY2SEC), mu=self.amu)
             lambert_v1 = final_step_lambert.get_v1()[0]
             dv_N_minus_1 = array(lambert_v1) - array(self.v_current)
+            self.extra_info['dv_n_minus_1'] = dv_N_minus_1
             carry_m = self.m_current
             self.m_current = self.Tsiolkovsky(array(dv_N_minus_1))
             self.plotting = np.concatenate((self.r_current, lambert_v1))
             self.extra_info['Plotting'] = self.plotting.copy()
 
-            # Equalization with venus (step N)
+            # Equalization with mars (step N)
             lambert_v2 = final_step_lambert.get_v2()[0]
-            dv_equalization = np.subtract(array(self.vT), array(lambert_v2)) # velocity of venus - velocity at final step 
+            dv_equalization = np.subtract(array(self.vT), array(lambert_v2)) # velocity of mars - velocity at final step 
+            # print('dv Eq' + str(norm(dv_equalization)))
             m_next = self.Tsiolkovsky(array(dv_equalization))
 
             self.m_current = carry_m
@@ -339,14 +326,13 @@ class Earth2VenusEnv(gym.Env):
             v_next = self.vT
             
             self.isDone = True  
-
+            self.extra_info['final_mass'] = m_next
             #Scalar Dv still works for Tsiolkovsky
             dv = norm(dv_N_minus_1) + norm(dv_equalization)
         
+        self.extra_info['dv'] = dv
         return r_next, v_next, m_next, dv
     
-        
-        
     def reset(self, seed=None, options=None):
         self.r_current = self.r0
         self.v_current = self.v0
