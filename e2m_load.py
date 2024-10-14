@@ -246,7 +246,7 @@ if __name__ == '__main__':
             
     input_file.close() #close file
     
-    Tmax = float(Tmax)
+    dvMax = float(dvMax)
     N_NODES = int(N_NODES)
     m0 = float(m_initial)
     Isp = float(Isp)                # specific impulse of engine 
@@ -280,7 +280,7 @@ if __name__ == '__main__':
         vT=vT, 
         rT=rT, 
         m0=m0, 
-        max_thrust=Tmax,
+        max_thrust=dvMax,
         v_ejection=v_ejection,
         mission_time=tof,
         using_reachability=using_reachability)

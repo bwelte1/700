@@ -1,12 +1,7 @@
-load_model                  1
-env_name                    e2m_env
-mission_name                Earth_Mars
-Tmax                        0.387
-N_NODES                     40
+dvMax                       2
+N_NODES                     7
 tof                         358
 Planet                      Mars
-num_cpu                     8
-init_learning_rate          4.0e-5
 init_clip_range             0.2
 ent_coef                    0.0
 nminibatches                10
@@ -23,7 +18,6 @@ sde_sample_freq             -1
 stats_window_size           100
 verbose                     0
 _init_setup_model           1
-start_date_julian           0
 m_initial                   1000
 using_reachability          1
 Isp                         2000

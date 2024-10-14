@@ -88,10 +88,8 @@ if __name__ == '__main__':
             
     input_file.close() #close file
     
-    load_model = bool(int(load_model))
-    Tmax = float(Tmax)
+    dvMax = float(dvMax)
     N_NODES = int(N_NODES)
-    num_cpu = int(num_cpu)
     init_clip_range = float(init_clip_range)
     ent_coef = float(ent_coef)
     nminibatches = int(nminibatches)
@@ -152,7 +150,7 @@ if __name__ == '__main__':
         vT=vT, 
         rT=rT, 
         m0=m0, 
-        max_thrust=Tmax,
+        max_thrust=dvMax,
         v_ejection=v_ejection,
         mission_time=tof,
         using_reachability=using_reachability
